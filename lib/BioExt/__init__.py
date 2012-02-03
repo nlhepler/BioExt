@@ -50,9 +50,9 @@ def by_codon(seq, gap_char=_GAP):
 
 def enumerate_by_codon(seq, gap_char=_GAP):
     if isinstance(seq, SeqRecord):
-        seq = seq.seq.data
+        seq = seq.seq.tostring()
     elif isinstance(seq, Seq):
-        seq = seq.data
+        seq = seq.tostring()
     elif not isinstance(seq, str):
         raise ValueError('can only enumerate codons of a SeqRecord, Seq, or str')
 
@@ -67,9 +67,9 @@ def enumerate_by_codon(seq, gap_char=_GAP):
 
 def translate_ambiguous(seq):
     if isinstance(seq, SeqRecord):
-        seqstr = seq.seq.data
+        seqstr = seq.seq.tostring()
     elif isinstance(seq, Seq):
-        seqstr = seq.data
+        seqstr = seq.tostring()
     elif not isinstance(seq, str):
         raise ValueError('can only enumerate codons of a SeqRecord, Seq, or str')
 
