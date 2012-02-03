@@ -65,7 +65,7 @@ def enumerate_by_codon(seq, gap_char=_GAP):
         yield (pos, cdn)
 
 
-def translate_ambiguous(seq):
+def translate_ambiguous(seq, gap_char=_GAP):
     if isinstance(seq, SeqRecord):
         seqstr = seq.seq.tostring()
     elif isinstance(seq, Seq):
@@ -73,10 +73,10 @@ def translate_ambiguous(seq):
     elif not isinstance(seq, str):
         raise ValueError('can only enumerate codons of a SeqRecord, Seq, or str')
 
-    seqstr = seqstr.replace(_GAP, '')
+    seqstr = seqstr.replace(gap_char, '')
 
     aminos = []
-    for _, cdn in enumerate_by_codon(seqstr):
+    for _, cdn in enumerate_by_codon(seqstr, gap_char):
         nucs = []
         for nuc in cdn:
             if nuc in _NUC_AMBIGS:
