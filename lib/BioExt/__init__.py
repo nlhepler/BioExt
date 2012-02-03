@@ -43,12 +43,12 @@ _AMINO_AMBIGS = {
 }
 
 
-def by_codon(seq):
-    for _, cdn in enumerate_by_codon(seq):
+def by_codon(seq, gap_char=_GAP):
+    for _, cdn in enumerate_by_codon(seq, gap_char):
         yield cdn
 
 
-def enumerate_by_codon(seq):
+def enumerate_by_codon(seq, gap_char=_GAP):
     if isinstance(seq, SeqRecord):
         seq = seq.seq.data
     elif isinstance(seq, Seq):
@@ -61,7 +61,7 @@ def enumerate_by_codon(seq):
     for i in range(num_cdns):
         pos = 3 * i
         cdn = seq[pos:min(seqlen, pos + 3)]
-        cdn += '-' * (3 - len(cdn))
+        cdn += gap_char * (3 - len(cdn))
         yield (pos, cdn)
 
 
