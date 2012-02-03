@@ -17,6 +17,7 @@ __all__ = [
 
 
 _GAP = '-'
+_STOP = '*'
 
 
 _NUC_AMBIGS = {
