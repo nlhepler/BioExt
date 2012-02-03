@@ -15,6 +15,15 @@ setup(name='bioext',
       author_email='nlhepler@gmail.com',
       url='http://github.com/nlhepler/bioext',
       license='GNU GPL version 3',
-      packages=['BioExt'],
-      package_dir={'BioExt': 'lib/BioExt'}
+      packages=['BioExt', 'BioExt._references'],
+      package_dir={
+        'BioExt': 'lib/BioExt',
+        'BioExt._references': 'lib/BioExt/_references'
+      },
+      package_data={
+        'BioExt': [
+            'data/references/hxb2/*.fa',
+            'data/references/nl4-3/*.fa'
+        ]
+      }
      )
