@@ -84,6 +84,6 @@ def translate_ambiguous(seq, gap_char=_GAP):
                 nucs.append(_NUC_AMBIGS[nuc])
             else:
                 nucs.append(nuc)
-        aminos.append([translate(''.join(p)) for p in product(*nucs)])
+        aminos.append(set(translate(''.join(p)) for p in product(*nucs)))
 
     return aminos
