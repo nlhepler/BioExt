@@ -7,6 +7,7 @@ from setuptools import setup
 
 sys.path.insert(0, join(split(abspath(__file__))[0], 'lib'))
 from BioExt import __version__ as _bioext_version
+from BioExt._references._factory import _installrefdirs
 
 setup(name='bioext',
       version=_bioext_version,
@@ -21,9 +22,6 @@ setup(name='bioext',
         'BioExt._references': 'lib/BioExt/_references'
       },
       package_data={
-        'BioExt': [
-            'data/references/hxb2/*.fa',
-            'data/references/nl4-3/*.fa'
-        ]
+        'BioExt': _installrefdirs
       }
      )
