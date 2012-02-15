@@ -1,4 +1,5 @@
 
+from collections import UserList
 from copy import deepcopy
 from itertools import product
 
@@ -13,6 +14,7 @@ __all__ = [
     '_GAP', '_STOP',
     'by_codon',
     'enumerate_by_codon',
+    'AmbigList',
     'translate_ambiguous'
 ]
 
@@ -66,7 +68,12 @@ def enumerate_by_codon(seq, gap_char=_GAP):
         yield (pos, cdn)
 
 
-def translate_ambiguous(seq, gap_char=_GAP):
+class AmbigList(UserList):
+    def __init__(self, aminos):
+        super(AmbigList, self).__init__(aminos)
+
+
+def translate_ambiguous(seq, gap_char=_GAP, trim_gaps=True):
     if isinstance(seq, SeqRecord):
         seqstr = seq.seq.tostring()
     elif isinstance(seq, Seq):
@@ -74,10 +81,19 @@ def translate_ambiguous(seq, gap_char=_GAP):
     elif not isinstance(seq, str):
         raise ValueError('can only enumerate codons of a SeqRecord, Seq, or str')
 
-    seqstr = seqstr.replace(gap_char, '')
+    if trim_gaps:
+        seqstr = seqstr.replace(gap_char, '')
+    seqstr = seqstr.upper()
 
     aminos = []
+    gap_cdn = 3 * gap_char
     for _, cdn in enumerate_by_codon(seqstr, gap_char):
+        # if we're not trimming gaps,
+        # convert gap codons into single codons
+        if cdn == gap_cdn:
+            aminos.append(set('-'))
+            continue
+        # otherwise, combinatorial fun
         nucs = []
         for nuc in cdn:
             if nuc in _NUC_AMBIGS:
@@ -86,4 +102,4 @@ def translate_ambiguous(seq, gap_char=_GAP):
                 nucs.append(nuc)
         aminos.append(set(translate(''.join(p)) for p in product(*nucs)))
 
-    return aminos
+    return AmbigList(aminos)
