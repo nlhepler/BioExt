@@ -51,7 +51,7 @@ def _findall(subs, string):
 
 class OrfList(object):
 
-    def __init__(self, seq):
+    def __init__(self, seq, include_stops=True):
         if isinstance(seq, SeqRecord):
             seq = seq.seq
         elif not isinstance(seq, (Seq, str)):
@@ -68,8 +68,10 @@ class OrfList(object):
         start_idxs = _findall(start_codons, useq)
         stop_idxs = _findall(stop_codons, useq)
 
+        offset = 3 if include_stops else 0
+
         orfs = []
-        last_codon = len(useq) - 3
+        seq_end = len(useq) - offset
         for frame in range(3):
             frame_start_idxs = [idx for idx in start_idxs if idx % 3 == frame]
             # no start codons? skip!
@@ -77,10 +79,10 @@ class OrfList(object):
                 continue
             first_start = frame_start_idxs[0]
             frame_stop_idxs = [idx for idx in stop_idxs if idx % 3 == frame and idx > first_start]
-            # allow ourselves to use the last codon in the sequence,
+            # allow ourselves to seek to the last position in the sequence,
             # if we've not already flagged it
-            if len(frame_stop_idxs) == 0 or frame_stop_idxs[-1] != last_codon:
-                frame_stop_idxs.append(last_codon)
+            if len(frame_stop_idxs) == 0 or frame_stop_idxs[-1] != seq_end:
+                frame_stop_idxs.append(seq_end)
             # find all orfs in this frame,
             # using `i` to save our last position in frame_stop_idxs,
             # and use it to shorten our next scan of stop_codons
@@ -89,7 +91,7 @@ class OrfList(object):
                 for j, stop_idx in enumerate(frame_stop_idxs[i:]):
                     # make sure we grab at least two complete codons
                     if stop_idx > (start_idx + 2):
-                        orfs.append((start_idx, stop_idx + 3))
+                        orfs.append((start_idx, stop_idx + offset))
                         i = j
                         break
 
