@@ -46,6 +46,24 @@ _AMINO_AMBIGS = {
 }
 
 
+def intersperse(iterable, delimiter, n=1):
+    if n < 1:
+        msg = "cannot intersperse every n = '%d' < 1 elements" % n
+        raise ValueError(msg)
+    n -= 1 # we yield a value manually, so yield in n - 1 groups
+    it = iter(iterable)
+    yield next(it) # yield manually
+    while True:
+        for _ in range(n):
+            yield next(it)
+        # grab a value manually before
+        # yielding a delimiter to avoid
+        # terminal delimiters
+        saved = next(it)
+        yield delimiter
+        yield saved # yield manually
+
+
 def by_codon(seq, gap_char=_GAP):
     for _, cdn in enumerate_by_codon(seq, gap_char):
         yield cdn
