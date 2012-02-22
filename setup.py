@@ -23,5 +23,6 @@ setup(name='bioext',
       },
       package_data={
         'BioExt': _installrefdirs
-      }
+      },
+      requires=['Bio', 'numpy']
      )
