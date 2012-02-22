@@ -12,6 +12,8 @@ __version__ = '0.0.9'
 
 __all__ = [
     '_GAP', '_STOP',
+    'homosplit',
+    'intersperse',
     'by_codon',
     'enumerate_by_codon',
     'AmbigList',
@@ -44,6 +46,19 @@ _AMINO_AMBIGS = {
     'Z': 'EQ',
     'X': 'ACDEFGHIKLMNPQRSTVWY'
 }
+
+
+def homosplit(iterable):
+    it = iter(iterable)
+    a = next(it)
+    i = 1
+    for b in it:
+        if b != a:
+            yield a * i
+            a = b
+            i = 0
+        i += 1
+    yield a * i
 
 
 def intersperse(iterable, delimiter, n=1):
