@@ -4,10 +4,7 @@ from copy import deepcopy
 from itertools import product
 from random import randint, uniform
 
-try:
-    from scipy.stats import norm
-except:
-    norm = None
+from scipy.stats import norm
 
 from Bio.Seq import Seq, translate
 from Bio.SeqRecord import SeqRecord
@@ -21,13 +18,14 @@ __all__ = [
     'randgene',
     'untranslate',
     'pyro_errors',
+    'errorize',
     'homosplit',
     'intersperse',
     'by_codon',
     'enumerate_by_codon',
     'AmbigList',
     'translate_ambiguous'
-] + ['errorize'] if norm else []
+]
 
 
 _GAP = '-'
@@ -63,7 +61,7 @@ def randgene(length, ppf):
     l = 0
     while l < length:
         # get the length
-        lp = ppf(uniform(0, 1)) + 1
+        lp = round(ppf(uniform(0, 1))) + 1
         # avoid stop codons
         if l % 3 == 1 and n1 == 3 and lp > 1:
             avoid = 0 # TAA (3, 0, 0)
@@ -121,19 +119,18 @@ def pyro_errors(x):
         return (x, 0.03494 + x * 0.0685)
 
 
-if norm:
-    def errorize(sequence, randlen=None):
-        if not isinstance(sequence, str):
-            raise ValueError('sequence must be of type str')
-        if randlen is None:
-            randlen = lambda l: round(norm.ppf(uniform(0, 1), *pyro_errors(l)))
-        alph = tuple(set(sequence))
-        l0 = len(alph) - 1
-        r = [alph[randint(0, l0)] * randlen(0)]
-        for x in homosplit(sequence):
-            r.append(x[0] * randlen(len(x)))
-            r.append(alph[randint(0, l0)] * randlen(0))
-        return ''.join(r)
+def errorize(sequence, randlen=None):
+    if not isinstance(sequence, str):
+        raise ValueError('sequence must be of type str')
+    if randlen is None:
+        randlen = lambda l: round(norm.ppf(uniform(0, 1), *pyro_errors(l)))
+    alph = tuple(set(sequence))
+    l0 = len(alph) - 1
+    r = [alph[randint(0, l0)] * randlen(0)]
+    for x in homosplit(sequence):
+        r.append(x[0] * randlen(len(x)))
+        r.append(alph[randint(0, l0)] * randlen(0))
+    return ''.join(r)
 
 
 def homosplit(iterable):

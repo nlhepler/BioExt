@@ -16,13 +16,14 @@ setup(name='bioext',
       author_email='nlhepler@gmail.com',
       url='http://github.com/nlhepler/bioext',
       license='GNU GPL version 3',
-      packages=['BioExt', 'BioExt._references'],
+      packages=['BioExt', 'BioExt.stats', 'BioExt._references'],
       package_dir={
         'BioExt': 'lib/BioExt',
-        'BioExt._references': 'lib/BioExt/_references'
+        'BioExt._references': 'lib/BioExt/_references',
+        'BioExt.stats': 'lib/BioExt/stats'
       },
       package_data={
         'BioExt': _installrefdirs
       },
-      requires=['Bio', 'numpy']
+      requires=['Bio', 'numpy', 'scipy']
      )
