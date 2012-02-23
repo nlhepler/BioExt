@@ -2,7 +2,7 @@
 from collections import UserList
 from copy import deepcopy
 from itertools import product
-from random import randint, random
+from random import randint, uniform
 
 try:
     from scipy.stats import norm
@@ -18,6 +18,8 @@ __version__ = '0.0.9'
 
 __all__ = [
     '_GAP', '_STOP',
+    'randgene',
+    'untranslate',
     'pyro_errors',
     'homosplit',
     'intersperse',
@@ -55,6 +57,51 @@ _AMINO_AMBIGS = {
 }
 
 
+def randgene(length, ppf):
+    s = []
+    avoid = c = n1 = n2 = -1
+    l = 0
+    while l < length:
+        # get the length
+        lp = ppf(uniform(0, 1)) + 1
+        # avoid stop codons
+        if l % 3 == 1 and n1 == 3 and lp > 1:
+            avoid = 0 # TAA (3, 0, 0)
+        elif l % 3 == 2 and n2 == 3:
+            if n1 == 0:
+                avoid = 2 # TAG (3, 0, 2)
+            elif n1 == 2:
+                avoid = 0 # TGA (3, 2, 0)
+        # avoid the last character and stop codons
+        while c == n1 or c == avoid:
+            c = randint(0, 3)
+        # setup state
+        n2 = n1 # negative 1 to negative 2
+        n1 = c # negative 1 to char
+        avoid = -1 # reset avoid
+        # grow seq
+        s.append('ACGT'[c] * lp)
+        l += lp
+    return ''.join(s)[:length]
+
+
+def untranslate(seq):
+    d = {}
+    for a in 'ACGT':
+        for b in 'ACGT':
+            for c in 'ACGT':
+                cdn = a + b + c
+                aa = translate(cdn)
+                if aa not in d:
+                    d[aa] = []
+                d[aa].append(cdn)
+    r = []
+    for aa in seq:
+        o = d[aa]
+        r.append(o[randint(0, len(o) - 1)])
+    return ''.join(r)
+
+
 # take from:
 # Characteristics of 454 pyrosequencing data—enabling realistic simulation with flowsim
 # Susanne Balzer, Ketil Malde, Anders Lanzén, Animesh Sharma, and Inge Jonassen
@@ -79,7 +126,7 @@ if norm:
         if not isinstance(sequence, str):
             raise ValueError('sequence must be of type str')
         if randlen is None:
-            randlen = lambda l: round(norm.ppf(random(), *pyro_errors(l)))
+            randlen = lambda l: round(norm.ppf(uniform(0, 1), *pyro_errors(l)))
         alph = tuple(set(sequence))
         l0 = len(alph) - 1
         r = [alph[randint(0, l0)] * randlen(0)]
