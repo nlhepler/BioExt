@@ -1,8 +1,15 @@
+# -*- coding: utf-8 -*-
 
-from collections import UserList
+from __future__ import division, print_function
+
+try:
+    from UserList import UserList
+except:
+    from collections import UserList
+
 from copy import deepcopy
 from itertools import product
-from random import randint, uniform
+from random import randint, random
 
 from scipy.stats import norm
 
@@ -61,7 +68,7 @@ def randgene(length, ppf):
     l = 0
     while l < length:
         # get the length
-        lp = round(ppf(uniform(0, 1))) + 1
+        lp = round(ppf(random())) + 1
         # avoid stop codons
         if l % 3 == 1 and n1 == 3 and lp > 1:
             avoid = 0 # TAA (3, 0, 0)
@@ -123,7 +130,7 @@ def errorize(sequence, randlen=None):
     if not isinstance(sequence, str):
         raise ValueError('sequence must be of type str')
     if randlen is None:
-        randlen = lambda l: round(norm.ppf(uniform(0, 1), *pyro_errors(l)))
+        randlen = lambda l: round(norm.ppf(random(), *pyro_errors(l)))
     alph = tuple(set(sequence))
     l0 = len(alph) - 1
     r = [alph[randint(0, l0)] * randlen(0)]

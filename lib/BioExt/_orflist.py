@@ -22,12 +22,21 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+from __future__ import division, print_function
+
 from Bio.Alphabet import generic_nucleotide, generic_protein
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 
 __all__ = ['OrfList']
+
+
+# deal with python 3
+try:
+    unicode is not None
+except NameError:
+    unicode = str
 
 
 def _findall(subs, string):
@@ -54,7 +63,7 @@ class OrfList(object):
     def __init__(self, seq, include_stops=True):
         if isinstance(seq, SeqRecord):
             seq = seq.seq
-        elif not isinstance(seq, (Seq, str)):
+        elif not isinstance(seq, (Seq, str, unicode)):
             raise ValueError('must provide either a SeqRecord, Seq, or str')
 
         self.__seq = seq
