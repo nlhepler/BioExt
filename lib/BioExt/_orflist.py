@@ -32,13 +32,6 @@ from Bio.SeqRecord import SeqRecord
 __all__ = ['OrfList']
 
 
-# deal with python 3
-try:
-    unicode is not None
-except NameError:
-    unicode = str
-
-
 def _findall(subs, string):
     idxs = []
     for sub in subs:
@@ -61,9 +54,15 @@ def _findall(subs, string):
 class OrfList(object):
 
     def __init__(self, seq, include_stops=True):
+        # deal with python 3
+        try:
+            seqtypes = (Seq, str, unicode)
+        except NameError:
+            seqtypes = (Seq, str)
+
         if isinstance(seq, SeqRecord):
             seq = seq.seq
-        elif not isinstance(seq, (Seq, str, unicode)):
+        elif not isinstance(seq, seqtypes):
             raise ValueError('must provide either a SeqRecord, Seq, or str')
 
         self.__seq = seq
