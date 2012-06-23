@@ -13,11 +13,8 @@ from random import randint, random
 
 from scipy.stats import norm
 
-from Bio.Seq import Seq, translate
+from Bio.Seq import Seq, translate as _translate
 from Bio.SeqRecord import SeqRecord
-
-
-__version__ = '0.0.9'
 
 
 __all__ = [
@@ -31,7 +28,8 @@ __all__ = [
     'by_codon',
     'enumerate_by_codon',
     'AmbigList',
-    'translate_ambiguous'
+    'translate_ambiguous',
+    'translate'
 ]
 
 
@@ -96,7 +94,7 @@ def untranslate(seq):
         for b in 'ACGT':
             for c in 'ACGT':
                 cdn = a + b + c
-                aa = translate(cdn)
+                aa = _translate(cdn)
                 if aa not in d:
                     d[aa] = []
                 d[aa].append(cdn)
@@ -198,6 +196,27 @@ class AmbigList(UserList):
         super(AmbigList, self).__init__(aminos)
 
 
+def translate(seq):
+    if isinstance(seq, SeqRecord):
+        features = deepcopy(seq.features)
+        for feature in features:
+            feature.location.start.position //= 3
+            feature.location.end.position //= 3
+        return SeqRecord(
+            seq.seq.translate(),
+            id=seq.id,
+            name=seq.name,
+            description=seq.description,
+            features=features
+        )
+    elif isinstance(seq, Seq):
+        return seq.translate()
+    elif isinstance(seq, str):
+        return _translate(seq)
+    else:
+        raise ValueError('can only translate sequences of type SeqRecord, Seq, or str')
+
+
 def translate_ambiguous(seq, gap_char=_GAP, trim_gaps=True):
     if isinstance(seq, SeqRecord):
         seqstr = seq.seq.tostring()
@@ -225,6 +244,6 @@ def translate_ambiguous(seq, gap_char=_GAP, trim_gaps=True):
                 nucs.append(_NUC_AMBIGS[nuc])
             else:
                 nucs.append(nuc)
-        aminos.append(set(translate(''.join(p)) for p in product(*nucs)))
+        aminos.append(set(_translate(''.join(p)) for p in product(*nucs)))
 
     return AmbigList(aminos)
