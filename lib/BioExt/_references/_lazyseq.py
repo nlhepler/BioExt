@@ -32,6 +32,9 @@ class Lazyseq(object):
         else:
             msg = "reference has an unknown file type extension '%s'" % ext
             raise ValueError(msg)
-        with open(self._seqpath) as fh:
-            record = SeqIO.read(fh, filetype)
-        return record
+        if exists(self._seqpath):
+            with open(self._seqpath) as fh:
+                return SeqIO.read(fh, filetype)
+        else:
+            msg = "cannot load sequence '%s', file missing!" % self._seqpath
+            raise RuntimeError(msg)

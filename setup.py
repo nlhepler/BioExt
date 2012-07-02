@@ -16,14 +16,22 @@ setup(name='bioext',
       author_email='nlhepler@gmail.com',
       url='http://github.com/nlhepler/bioext',
       license='GNU GPL version 3',
-      packages=['BioExt', 'BioExt.stats', 'BioExt._references'],
+      packages=[
+        'BioExt',
+        'BioExt._references',
+        'BioExt._scorematrix',
+        'BioExt.stats'
+      ],
       package_dir={
         'BioExt': 'lib/BioExt',
         'BioExt._references': 'lib/BioExt/_references',
+        'BioExt._scorematrix': 'lib/BioExt/_scorematrix',
         'BioExt.stats': 'lib/BioExt/stats'
       },
       package_data={
-        'BioExt': _installrefdirs
+        'BioExt': [
+            'data/scorematrices/*.txt'
+        ] + _installrefdirs
       },
       requires=['Bio (>=1.58)', 'numpy (>=1.6)', 'scipy (>=0.10.1)']
      )
