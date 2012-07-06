@@ -217,7 +217,7 @@ def _translate_gapped(seq, *args, **kwds):
         elif gaps:
             protein += '-' * gaps
             gaps = 0
-            lwr = j
+            lwr = i
     if gaps:
         protein += '-' * gaps
     else:

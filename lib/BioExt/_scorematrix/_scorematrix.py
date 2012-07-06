@@ -10,6 +10,7 @@ from numpy import mean
 
 
 __all__ = [
+    'DNA80',
     'parse_scorematrix',
     'DNAScoreMatrix',
     'DNAExpIdScoreMatrix',
@@ -82,6 +83,7 @@ class ScoreMatrix(object):
             q = seq[i]
             if '-' in (r, q):
                 score -= mismatch
+                continue
             try:
                 score += self.__matrix[alph[r]][alph[q]]
             except KeyError:
@@ -96,7 +98,7 @@ class DNAScoreMatrix(ScoreMatrix):
         super(DNAScoreMatrix, self).__init__(matrix, letters)
 
 
-class DNAExpIdScoreMatrix(ScoreMatrix):
+class DNAExpIdScoreMatrix(DNAScoreMatrix):
 
     def __init__(self, expected_identity, freqs):
         if not set(freqs.keys()).issubset(set(dletters)):
@@ -120,3 +122,6 @@ class ProteinScoreMatrix(ScoreMatrix):
 
     def __init__(self, matrix, letters=pletters):
         super(ProteinScoreMatrix, self).__init__(matrix, letters)
+
+
+DNA80 = DNAExpIdScoreMatrix(0.8, {'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
