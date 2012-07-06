@@ -196,23 +196,52 @@ class AmbigList(UserList):
         super(AmbigList, self).__init__(aminos)
 
 
-def translate(seq):
+def _translate_gapped(seq, *args, **kwds):
+    if isinstance(seq, SeqRecord):
+        s = str(seq.seq)
+    elif isinstance(seq, Seq):
+        s = str(seq)
+    elif isinstance(seq, str):
+        s = seq
+    else:
+        raise ValueError("can only translate sequences of type SeqRecord, Seq, or str")
+    gaps = 0
+    lwr = 0
+    protein = ''
+    for i in range(0, len(s), 3):
+        j = min(i + 3, len(s))
+        if s[i:j] == '---'[:j - i]:
+            if not gaps:
+                protein += _translate(s[lwr:i])
+            gaps += 1
+        elif gaps:
+            protein += '-' * gaps
+            gaps = 0
+            lwr = j
+    if gaps:
+        protein += '-' * gaps
+    else:
+        protein += _translate(s[lwr:len(seq)])
+    return protein
+
+
+def translate(seq, *args, **kwds):
     if isinstance(seq, SeqRecord):
         features = deepcopy(seq.features)
         for feature in features:
             feature.location.start.position //= 3
             feature.location.end.position //= 3
         return SeqRecord(
-            seq.seq.translate(),
+            Seq(_translate_gapped(seq.seq, *args, **kwds)),
             id=seq.id,
             name=seq.name,
             description=seq.description,
             features=features
         )
     elif isinstance(seq, Seq):
-        return seq.translate()
+        return Seq(_translate_gapped(seq, *args, **kwds))
     elif isinstance(seq, str):
-        return _translate(seq)
+        return _translate_gapped(seq, *args, **kwds)
     else:
         raise ValueError('can only translate sequences of type SeqRecord, Seq, or str')
 

@@ -1,6 +1,4 @@
 
-from os.path import join
-
 from ._scorematrix import *
 
 

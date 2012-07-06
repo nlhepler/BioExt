@@ -4,6 +4,7 @@ from __future__ import division, print_function
 from itertools import chain
 from math import log
 from re import compile as re_compile
+from warnings import warn
 
 from numpy import mean
 
@@ -16,7 +17,7 @@ __all__ = [
 ]
 
 
-pletters = 'ARNDCQEGHILKMFPSTWYV'
+pletters = 'ARNDCQEGHILKMFPSTWYVBZX*'
 dletters = 'ACGT'
 
 
@@ -67,7 +68,26 @@ class ScoreMatrix(object):
         mstr = '{\n {%s}\n}' % '}\n {'.join(
             ', '.join(self.__format % str(s) for s in row) for row in self.__matrix
         )
-        return '%s = "%s";\n%s = %s;' % (lname, self.__letters, mname, mstr)
+        return '%s = "%s";\n%s = %s;' % (lname, self.__letters[:20], mname, mstr)
+
+    def __call__(self, ref, seq, mismatch=0):
+        return ScoreMatrix.score(self, ref, seq, mismatch)
+
+    def score(self, ref, seq, mismatch=0):
+        if not len(ref) == len(seq):
+            raise ValueError("reference and query are not aligned")
+        alph = dict((v, i) for i, v in enumerate(self.__letters))
+        score = 0
+        for i, r in enumerate(ref):
+            q = seq[i]
+            if '-' in (r, q):
+                score -= mismatch
+            try:
+                score += self.__matrix[alph[r]][alph[q]]
+            except KeyError:
+                l = r if r not in alph else q
+                warn("unknown letter '%s', ignoring" % l)
+        return score
 
 
 class DNAScoreMatrix(ScoreMatrix):
