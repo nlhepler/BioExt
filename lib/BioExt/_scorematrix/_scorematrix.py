@@ -6,8 +6,6 @@ from math import log
 from re import compile as re_compile
 from warnings import warn
 
-from numpy import mean
-
 
 __all__ = [
     'DNA80',
@@ -104,7 +102,7 @@ class DNAExpIdScoreMatrix(DNAScoreMatrix):
         if not set(freqs.keys()).issubset(set(dletters)):
             msg = "frequencies provided to not address each of '%s'" % dletters
             raise ValueError(msg)
-        lam = 1. / mean(list(freqs.values()))
+        lam = 1. / min(list(freqs.values()))
         N = len(dletters)
         pab = expected_identity / N
         pnab = (1. - expected_identity) / (N ** 2 - N)
