@@ -8,7 +8,11 @@ from warnings import warn
 
 
 __all__ = [
+    'DNA65',
+    'DNA70',
     'DNA80',
+    'DNA88',
+    'DNA95',
     'parse_scorematrix',
     'DNAScoreMatrix',
     'DNAExpIdScoreMatrix',
@@ -72,6 +76,10 @@ class ScoreMatrix(object):
     def __call__(self, ref, seq, mismatch=0):
         return ScoreMatrix.score(self, ref, seq, mismatch)
 
+    # so we don't have to worry about calling load() on DNA* matrices
+    def load(self):
+        return self
+
     def score(self, ref, seq, mismatch=0):
         if not len(ref) == len(seq):
             raise ValueError("reference and query are not aligned")
@@ -97,8 +105,16 @@ class DNAScoreMatrix(ScoreMatrix):
 
 
 class DNAExpIdScoreMatrix(DNAScoreMatrix):
+    UNIFORM_FREQS = {
+        'A': 0.25,
+        'C': 0.25,
+        'G': 0.25,
+        'T': 0.25
+    }
 
-    def __init__(self, expected_identity, freqs):
+    def __init__(self, expected_identity, freqs=None):
+        if freqs is None:
+            freqs = DNAExpIdScoreMatrix.UNIFORM_FREQS
         if not set(freqs.keys()).issubset(set(dletters)):
             msg = "frequencies provided to not address each of '%s'" % dletters
             raise ValueError(msg)
@@ -122,4 +138,8 @@ class ProteinScoreMatrix(ScoreMatrix):
         super(ProteinScoreMatrix, self).__init__(matrix, letters)
 
 
-DNA80 = DNAExpIdScoreMatrix(0.8, {'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+DNA65 = DNAExpIdScoreMatrix(0.65)
+DNA70 = DNAExpIdScoreMatrix(0.70)
+DNA80 = DNAExpIdScoreMatrix(0.80)
+DNA88 = DNAExpIdScoreMatrix(0.88)
+DNA95 = DNAExpIdScoreMatrix(0.95)
