@@ -40,7 +40,7 @@ class UntranslationTable(object):
             j = i + 3
             if j > len(seq):
                 continue
-            cdn = seq[i:j]
+            cdn = seq[i:j].upper()
             aa = _translate(cdn)
             # skip unknown codons, they are irrelevant
             if aa == 'X':
