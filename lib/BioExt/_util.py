@@ -20,7 +20,6 @@ from Bio.SeqRecord import SeqRecord
 __all__ = [
     '_GAP', '_STOP',
     'randgene',
-    'untranslate',
     'pyro_errors',
     'errorize',
     'homosplit',
@@ -86,23 +85,6 @@ def randgene(length, ppf):
         s.append('ACGT'[c] * lp)
         l += lp
     return ''.join(s)[:length]
-
-
-def untranslate(seq):
-    d = {}
-    for a in 'ACGT':
-        for b in 'ACGT':
-            for c in 'ACGT':
-                cdn = a + b + c
-                aa = _translate(cdn)
-                if aa not in d:
-                    d[aa] = []
-                d[aa].append(cdn)
-    r = []
-    for aa in seq:
-        o = d[aa]
-        r.append(o[randint(0, len(o) - 1)])
-    return ''.join(r)
 
 
 # take from:

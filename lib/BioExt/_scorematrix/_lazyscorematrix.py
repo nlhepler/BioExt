@@ -1,9 +1,7 @@
 
 from __future__ import division, print_function
 
-from itertools import chain
 from os.path import exists, join
-from re import compile as re_compile
 
 from ._scorematrix import parse_scorematrix
 

@@ -2,7 +2,6 @@
 from __future__ import division, print_function
 
 from os.path import join, exists, splitext
-from os import path
 
 from Bio import SeqIO
 

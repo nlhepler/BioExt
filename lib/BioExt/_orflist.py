@@ -24,7 +24,6 @@
 
 from __future__ import division, print_function
 
-from Bio.Alphabet import generic_nucleotide, generic_protein
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
