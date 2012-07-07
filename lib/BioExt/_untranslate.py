@@ -73,6 +73,8 @@ class UntranslationTable(object):
 UniformUntranslationTable = UntranslationTable('', 1)
 
 def untranslate(seq, table=UniformUntranslationTable):
+    if not isinstance(table, UntranslationTable):
+        raise ValueError('table must be an UntranslationTable object')
     r = []
     for aa in seq:
         r.append(table[aa])
