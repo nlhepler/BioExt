@@ -7,7 +7,6 @@ try:
 except:
     from collections import UserList
 
-from copy import deepcopy
 from itertools import product
 from random import randint, random
 
@@ -15,6 +14,7 @@ from scipy.stats import norm
 
 from Bio.Seq import Seq, translate as _translate
 from Bio.SeqRecord import SeqRecord
+from Bio.SeqFeature import FeatureLocation, SeqFeature
 
 
 __all__ = [
@@ -209,10 +209,23 @@ def _translate_gapped(seq, *args, **kwds):
 
 def translate(seq, *args, **kwds):
     if isinstance(seq, SeqRecord):
-        features = deepcopy(seq.features)
-        for feature in features:
-            feature.location.start.position //= 3
-            feature.location.end.position //= 3
+        features = []
+        for feature in seq.features:
+            # ignore features on the opposite strand
+            strand = feature.location.strand
+            if strand is not None and strand < 0:
+                continue
+            features.append(
+                SeqFeature(
+                    FeatureLocation(
+                        feature.location.start.position // 3,
+                        feature.location.end.position // 3
+                        # for protein sequences,
+                        # having a strand doesn't make sense
+                    ),
+                    type=feature.type
+                )
+            )
         return SeqRecord(
             Seq(_translate_gapped(seq.seq, *args, **kwds)),
             id=seq.id,

@@ -5,7 +5,8 @@ from __future__ import division, print_function
 from operator import itemgetter
 from random import random
 
-from Bio.Seq import translate as _translate
+from Bio.Seq import Seq, translate as _translate
+from Bio.SeqRecord import SeqRecord
 
 from ._counter import Counter
 
@@ -34,7 +35,13 @@ def _default_table(prior=0):
 
 class UntranslationTable(object):
 
-    def __init__(self, seq=None, prior=0):
+    def __init__(self, seq, prior=0):
+        if isinstance(seq, SeqRecord):
+            seq = str(seq.seq)
+        elif isinstance(seq, Seq):
+            seq = str(seq)
+        elif not isinstance(seq, str):
+            raise ValueError('seq must be of type SeqRecord, Seq, or str')
         table = _default_table(0)
         for i in range(0, len(seq), 3):
             j = i + 3
