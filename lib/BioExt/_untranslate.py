@@ -57,10 +57,14 @@ class UntranslationTable(object):
             table[aa][cdn] += 1
         for aa, cdns in table.items():
             total = prior * len(cdns) + sum(cdns.values())
+            unif = 1. / len(cdns)
             cdf = []
             acc = 0.
             for cdn, count in sorted(cdns.items(), key=itemgetter(1)):
-                pdf = (count + prior) / total
+                if total:
+                    pdf = (count + prior) / total
+                else:
+                    pdf = unif
                 acc += pdf
                 cdf.append((acc, cdn))
             table[aa] = cdf
