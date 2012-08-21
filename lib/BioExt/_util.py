@@ -194,7 +194,7 @@ def _translate_gapped(seq, *args, **kwds):
         j = min(i + 3, len(s))
         if s[i:j] == '---'[:j - i]:
             if not gaps:
-                protein += _translate(s[lwr:i])
+                protein += _translate(s[lwr:i].replace('-', 'N'))
             gaps += 1
         elif gaps:
             protein += '-' * gaps
@@ -203,7 +203,7 @@ def _translate_gapped(seq, *args, **kwds):
     if gaps:
         protein += '-' * gaps
     else:
-        protein += _translate(s[lwr:len(seq)])
+        protein += _translate(s[lwr:len(seq)].replace('-', 'N'))
     return protein
 
 
