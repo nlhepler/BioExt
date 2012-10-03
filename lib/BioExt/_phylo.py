@@ -16,10 +16,7 @@ class Clade(namedtuple('Clade', ['branch_length', 'children', 'depth', 'name', '
         attrs = ['branch_length=%g' % branch_length]
         if self.name:
             attrs.append("name='%s'" % self.name)
-        return "%sClade(%s)" % (
-            ' ' * 4 * (self.depth + 1),
-            ', '.join(attrs)
-        )
+        return "Clade(%s)" % ', '.join(attrs)
 
 
 class NewickParser(object):
@@ -115,6 +112,7 @@ class Tree(deque):
 
     def __init__(self, *args, **kwargs):
         super(Tree, self).__init__(*args, **kwargs)
+        self.reverse()
         cladogram = True
         for i, node in enumerate(self):
             node.index = i
@@ -124,30 +122,39 @@ class Tree(deque):
 
 
     @staticmethod
-    def __path_to_root(default, node, acc=0):
+    def __path_to_root(default, node, acc=0, shared=None):
         d = default if node.branch_length is None else node.branch_length
-        if node.parent is None:
-            lst = [(-1, acc + d)]
+        if shared is None:
+            if node.parent is None:
+                lst = {-1: acc + d}
+            else:
+                lst = Tree.__path_to_root(default, node.parent, acc + d)
+            lst[node.index] = acc
+            return lst
+        elif node.index in shared:
+            return node.index, acc
+        elif node.parent is None:
+            return -1, acc + d
         else:
-            lst = Tree.__path_to_root(default, node.parent, acc + d)
-        lst.append((node.index, acc))
-        return lst
+            return Tree.__path_to_root(default, node.parent, acc + d, shared)
 
     def distance(self, node1, node2):
         d = 1 if self.cladogram else 0.0
-        path1 = dict(Tree.__path_to_root(d, node1))
-        path2 = dict(Tree.__path_to_root(d, node2))
-        shared = path1.keys() & path2.keys()
-        return min(path1[k] + path2[k] for k in shared)
+        path1 = Tree.__path_to_root(d, node1, 0)
+        idx, path2 = Tree.__path_to_root(d, node2, 0, path1)
+        return path1[idx] + path2
+        # shared = path1.keys() & path2.keys()
+        # return min(path1[k] + path2[k] for k in shared)
 
     def get_terminals(self):
         return [n for n in self if len(n.children) == 0]
 
     def __repr__(self):
-        lines = ['Tree(weight=1.0 rooted=False)']
+        lines = []
         if len(self):
-            lines.extend(repr(node) for node in self)
-        return '\n'.join(lines)
+            lines.extend((' ' * 4 * (node.depth + 1)) + repr(node) for node in self)
+        lines.reverse()
+        return 'Tree(weight=1.0 rooted=False)\n' + '\n'.join(lines)
 
     def __str__(self):
         return repr(self)
