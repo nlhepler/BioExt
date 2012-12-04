@@ -83,7 +83,11 @@ class Aligner:
             miscall_cost = min_score
 
         letters = letters.encode('utf8')
-        char_map = -np.ones((256,), dtype=int)
+        char_map = np.zeros((256,), dtype=int)
+        # this ensures that no matter context,
+        # computing the codon index (16 * i + 4 * j + k) will always be 0
+        # for any i, j, k in [0, 3]
+        char_map[:] = -256
         for i, l in enumerate(letters):
             char_map[l] = i
 
