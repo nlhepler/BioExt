@@ -83,7 +83,7 @@ class Aligner:
             miscall_cost = min_score
 
         letters = letters.encode('utf8')
-        char_map = -np.ones((max(letters) + 1,), dtype=int)
+        char_map = -np.ones((256,), dtype=int)
         for i, l in enumerate(letters):
             char_map[l] = i
 
