@@ -8,7 +8,7 @@ from random import random
 from Bio.Seq import Seq, translate as _translate
 from Bio.SeqRecord import SeqRecord
 
-from ._counter import Counter
+from ..counter import Counter
 
 
 __all__ = [

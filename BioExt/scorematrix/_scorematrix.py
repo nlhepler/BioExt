@@ -6,6 +6,8 @@ from math import log
 from re import compile as re_compile
 from warnings import warn
 
+import numpy as np
+
 
 __all__ = [
     'DNA65',
@@ -56,8 +58,20 @@ class ScoreMatrix(object):
 
     def __init__(self, matrix, letters):
         self.__matrix = matrix
-        self.__letters = letters
+        self.__letters = ''.join(letters) # make sure it's a string
         self.__format = '%% %ds' % max(len(str(d)) for d in chain(*matrix))
+
+    @property
+    def letters(self):
+        return self.__letters
+
+    def tondarray(self):
+        N = len(self.__letters)
+        mat = np.zeros((N, N), dtype=float)
+        for i in range(N):
+            for j in range(N):
+                mat[i, j] = self.__matrix[i][j]
+        return mat
 
     def __getitem__(self, key):
         if not isinstance(key, tuple) or len(key) != 2:
