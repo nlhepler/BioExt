@@ -27,12 +27,8 @@ def _protein_to_codon(protein_matrix):
     protein_matrix_ = protein_matrix.tondarray()
     M, N = protein_matrix_.shape
     for i in range(M):
-        if i not in mapping:
-            continue
         for k in mapping[i]:
             for j in range(N):
-                if j not in mapping:
-                    continue
                 for l in mapping[j]:
                     codon_matrix[k, l] = protein_matrix_[i, j]
     return dletters, codon_matrix

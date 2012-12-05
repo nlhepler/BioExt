@@ -11,8 +11,7 @@ query = 'CCTCAGATCACTCTTATGATGATGTGGCAACGACCCCTCGTCACAATAAAGGTAGGGGGGCAGCTAAAGGA
 print(set(ref))
 print(set(query))
 
-for i in range(100):
-    s, r, q = aln(ref, query, extend_insertion=1, extend_deletion=1)
+s, r, q = aln(ref, query, extend_insertion=1, extend_deletion=1)
 
 print(s)
 print(r)
