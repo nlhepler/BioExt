@@ -24,8 +24,9 @@ __all__ = [
     'enumerate_by_codon',
     'AmbigList',
     'translate_ambiguous',
-    'translate'
-]
+    'translate',
+    'compute_cigars'
+    ]
 
 
 _GAP = '-'
@@ -297,4 +298,3 @@ def compute_cigars(alignment, reference):
         record.annotations['reference_name'] = reference.name
 
         yield record
-
