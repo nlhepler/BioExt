@@ -9,7 +9,7 @@ from re import (compile as re_compile,
     search as re_search, I as re_I)
 
 
-from ._lazyseq import _lazyseq
+from BioExt.references._lazyseq import _lazyseq
 
 
 __all__ = []

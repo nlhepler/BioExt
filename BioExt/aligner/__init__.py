@@ -5,9 +5,8 @@ import numpy as np
 
 from Bio.Seq import translate as _translate
 
-from ..scorematrix import ProteinScoreMatrix as _ProteinScoreMatrix
-
-from ._align import _align, _compute_codon_matrices
+from BioExt.aligner._align import _align, _compute_codon_matrices
+from BioExt.scorematrix import ProteinScoreMatrix as _ProteinScoreMatrix
 
 
 __all__ = ['Aligner']

@@ -1,9 +1,9 @@
 
 from random import randint, random
 
-from scipy import norm
+from scipy.stats import norm
 
-from ..misc import homosplit
+from BioExt.misc import homosplit
 
 
 __all__ = [

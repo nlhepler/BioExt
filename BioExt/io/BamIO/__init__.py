@@ -7,7 +7,7 @@ from pysam import view as samtools_view
 
 from Bio.Align import MultipleSeqAlignment
 
-from ..SamIO import parse as sam_parse, write as sam_write
+from BioExt.io.SamIO import parse as sam_parse, write as sam_write
 
 
 __all__ = [

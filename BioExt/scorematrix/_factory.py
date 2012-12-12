@@ -7,7 +7,7 @@ from os.path import (abspath, basename,
 from re import search as re_search
 
 
-from ._lazyscorematrix import _lazyscorematrix
+from BioExt.scorematrix._lazyscorematrix import _lazyscorematrix
 
 
 __all__ = []

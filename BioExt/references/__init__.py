@@ -1,7 +1,7 @@
 
 from os.path import join
 
-from ._factory import _refdir, _reffactory
+from BioExt.references._factory import _refdir, _reffactory
 
 
 __all__ = ['hxb2', 'nl4_3']

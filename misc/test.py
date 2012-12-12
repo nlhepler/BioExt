@@ -2,7 +2,7 @@ from time import time
 
 from Bio import Phylo as _Phylo
 
-from BioExt import Phylo
+from BioExt.phylo import Phylo
 from six.moves import cStringIO
 
 import numpy as np
