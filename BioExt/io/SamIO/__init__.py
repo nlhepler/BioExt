@@ -7,7 +7,7 @@ from Bio.Alphabet import single_letter_alphabet
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from BioExt.misc import compute_cigars
+from BioExt.misc import compute_cigar
 
 
 __all__ = [
@@ -64,7 +64,7 @@ def parse(handle):
         yield record
 
 
-def write(records, handle, reference=None):
+def write(records, handle, reference=None, new_style=False):
     re_alph = re_compile(r'[^A-Z]')
 
     #header lines
@@ -83,14 +83,20 @@ def write(records, handle, reference=None):
             )
 
     if reference is not None and isinstance(records, MultipleSeqAlignment):
-        iterate = compute_cigars
+        def iterate(records):
+            for record in records:
+                if ('CIGAR' in record.annotations and
+                    'position' in record.annotations):
+                    yield record
+                else:
+                    yield compute_cigar(reference, record, new_style)
     else:
-        def iterate(records, _):
+        def iterate(records):
             for record in records:
                 yield record
 
-    for record in iterate(records, reference):
-
+    for record in iterate(records):
+        # retrieve the optional annotations
         flag = record.annotations.get('sam_flag', 0)
         mapq = record.annotations.get('mapping_quality', 255)
         rname = record.annotations.get('reference_name', '*')

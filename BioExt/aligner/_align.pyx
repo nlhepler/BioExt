@@ -41,8 +41,8 @@ cdef extern from "alignment.h":
         dtype_t *,
         dtype_t *,
         dtype_t *,
-        dtype_t *,
-        )
+        dtype_t *
+        ) nogil
 
 
 @cython.boundscheck(False)
@@ -114,12 +114,13 @@ def _compute_codon_matrices(dtype_t[:, :] cost_matrix):
     return codon3x5, codon3x4, codon3x2, codon3x1
 
 @cython.boundscheck(False)
+@cython.wraparound(False)
 def _align(
-        char * ref,
-        char * query,
+        unicode u_ref,
+        unicode u_query,
         itype_t char_count,
         np.ndarray[itype_t] char_map,
-        np.ndarray[dtype_t, ndim=2] cost_matrix,
+        np.ndarray[dtype_t, ndim=2, mode='c'] cost_matrix,
         itype_t cost_stride,
         dtype_t open_insertion,
         dtype_t extend_insertion,
@@ -129,20 +130,27 @@ def _align(
         itype_t do_local,
         itype_t do_affine,
         itype_t do_codon,
-        np.ndarray[dtype_t, ndim=2] codon3x5,
-        np.ndarray[dtype_t, ndim=2] codon3x4,
-        np.ndarray[dtype_t, ndim=2] codon3x2,
-        np.ndarray[dtype_t, ndim=2] codon3x1):
+        np.ndarray[dtype_t, ndim=2, mode='c'] codon3x5,
+        np.ndarray[dtype_t, ndim=2, mode='c'] codon3x4,
+        np.ndarray[dtype_t, ndim=2, mode='c'] codon3x2,
+        np.ndarray[dtype_t, ndim=2, mode='c'] codon3x1):
+
+    # cast from unicode to char *
+    cdef bytes b_ref = u_ref.encode('utf8')
+    cdef bytes b_query = u_query.encode('utf8')
+    cdef char * ref = b_ref
+    cdef char * query = b_query
 
     cdef char * ref_aligned
     cdef char * query_aligned
-    cdef bytes py_ref_aligned
-    cdef bytes py_query_aligned
+    cdef unicode u_ref_aligned
+    cdef unicode u_query_aligned
     cdef dtype_t score
 
     try:
         score = AlignStrings(
-            ref, query, &ref_aligned, &query_aligned,
+            ref, query,
+            &ref_aligned, &query_aligned,
             char_count,
             <itype_t *> char_map.data,
             <dtype_t *> cost_matrix.data,
@@ -162,12 +170,12 @@ def _align(
             free(query_aligned)
             raise MemoryError('memory allocation error in AlignStrings(...)')
 
-        # cast strings back to python types
-        py_ref_aligned = ref_aligned
-        py_query_aligned = query_aligned
+        # cast char * back to unicode
+        u_ref_aligned = ref_aligned.decode('utf8')
+        u_query_aligned = query_aligned.decode('utf8')
 
     finally:
         free(ref_aligned)
         free(query_aligned)
 
-    return score, py_ref_aligned, py_query_aligned
+    return score, u_ref_aligned, u_query_aligned

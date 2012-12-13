@@ -25,11 +25,12 @@ __all__ = [
     'AmbigList',
     'translate_ambiguous',
     'translate',
-    'compute_cigars'
+    'compute_cigar'
     ]
 
 
 _GAP = '-'
+_GAPS = (_GAP, '.')
 _STOP = '*'
 
 
@@ -237,64 +238,63 @@ def translate_ambiguous(seq, gap_char=_GAP, trim_gaps=True):
     return AmbigList(aminos)
 
 
-def compute_cigars(alignment, reference):
-    ncol = alignment.get_alignment_length()
-    if len(reference) != ncol:
-        raise ValueError('Reference must be the same length as the alignment')
+def compute_cigar(reference, record, new_style=False):
+    ncol = len(record)
 
-    GAPS = ('-', '.')
-    for record in alignment:
-        # find start, end of record in the ref
-        start, end = 0, ncol - 1
-        for i in range(ncol):
-            if record[i] not in GAPS:
-                start = i
-                break
-        for i in range(ncol, 0, -1):
-            if record[i - 1] not in GAPS:
-                end = i
-                break
+    # find start, end of record in the ref
+    start, end = 0, ncol - 1
+    for i in range(ncol):
+        if record[i] not in _GAPS:
+            start = i
+            break
+    for i in range(ncol, 0, -1):
+        if record[i - 1] not in _GAPS:
+            end = i
+            break
 
-        # compute cigar and edit distance
-        cigar = ''
-        edit_distance = 0
-        mode = ''
-        count = 0
-        for i in range(start, end):
-            ref = reference[i].upper()
-            query = record[i].upper()
-            if ref in GAPS and query in GAPS:
-                # if both are gaps, skip
-                pass
-            elif ref in GAPS:
-                m = 'I' # insertion
-                edit_distance += 1
-            elif query in GAPS:
-                m = 'D' # deletion
-                edit_distance += 1
-            elif ref == query:
-                m = '=' # match
-            else:
-                m = 'X' # mismatch
-                edit_distance += 1
-            # cigar handling
-            if not mode:
-                mode = m
-                count = 1
-            elif m == mode:
-                count += 1
-            else:
-                cigar += '%d%s' % (count, mode)
-                mode = m
-                count = 1
-        # don't forget the last bit
-        cigar += '%d%s' % (count, mode)
+    MATCH = '=' if new_style else 'M'
+    MISMATCH = 'X' if new_style else 'M'
 
-        # inject the annotations and yield
-        record.annotations['CIGAR'] = cigar
-        record.annotations['edit_distance'] = edit_distance
-        record.annotations['position'] = start + 1 # 1-indexed
-        record.annotations['length'] = end - start
-        record.annotations['reference_name'] = reference.name
+    # compute cigar and edit distance
+    cigar = ''
+    edit_distance = 0
+    mode = ''
+    count = 0
+    for i in range(start, end):
+        ref = reference[i].upper()
+        query = record[i].upper()
+        if ref in _GAPS and query in _GAPS:
+            # if both are gaps, skip
+            pass
+        elif ref in _GAPS:
+            m = 'I' # insertion
+            edit_distance += 1
+        elif query in _GAPS:
+            m = 'D' # deletion
+            edit_distance += 1
+        elif ref == query:
+            m = MATCH # match
+        else:
+            m = MISMATCH # mismatch
+            edit_distance += 1
+        # cigar handling
+        if not mode:
+            mode = m
+            count = 1
+        elif m == mode:
+            count += 1
+        else:
+            cigar += '%d%s' % (count, mode)
+            mode = m
+            count = 1
+    # don't forget the last bit
+    cigar += '%d%s' % (count, mode)
 
-        yield record
+    # inject the annotations and yield
+    record.annotations['CIGAR'] = cigar
+    record.annotations['edit_distance'] = edit_distance
+    record.annotations['position'] = start + 1 # 1-indexed
+    record.annotations['length'] = end - start
+    record.annotations['reference_name'] = reference.name
+
+    return record

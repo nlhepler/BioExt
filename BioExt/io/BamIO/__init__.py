@@ -1,11 +1,10 @@
 
 from os import close, remove
 from os.path import exists
+from shutil import move
 from tempfile import mkstemp
 
-from pysam import view as samtools_view
-
-from Bio.Align import MultipleSeqAlignment
+from pysam import view as samtools_view, sort as samtools_sort
 
 from BioExt.io.SamIO import parse as sam_parse, write as sam_write
 
@@ -32,10 +31,7 @@ def parse(handle):
             remove(path)
 
 
-def write(records, handle, reference):
-    if not isinstance(records, MultipleSeqAlignment):
-        raise ValueError('BamIO.write() requires an multiple sequence alignment and a reference')
-
+def write(records, handle, reference, new_style=False):
     handle_mode = handle.mode.lower()
     if 'b' not in handle_mode or 'w' not in handle_mode:
         raise ValueError('BamIO.write() takes a file handle opened for binary write')
@@ -44,9 +40,20 @@ def write(records, handle, reference):
         fd, path = mkstemp(); close(fd)
 
         with open(path, 'w') as fh:
-            sam_write(records, fh, reference)
+            sam_write(records, fh, reference, new_style)
 
         handle.write(samtools_view('-bS', path))
     finally:
         if exists(path):
             remove(path)
+
+def sort(path):
+    try:
+        fd, new_path = mkstemp(); close(fd)
+
+        samtools_sort(path, new_path)
+        new_path += '.bam' # sort adds the .bam suffix automatically
+        move(new_path, path)
+    finally:
+        if exists(new_path):
+            remove(new_path)

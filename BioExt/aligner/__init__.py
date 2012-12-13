@@ -3,7 +3,8 @@ from collections import defaultdict
 
 import numpy as np
 
-from Bio.Seq import translate as _translate
+from Bio.Seq import Seq, translate as _translate
+from Bio.SeqRecord import SeqRecord
 
 from BioExt.aligner._align import _align, _compute_codon_matrices
 from BioExt.scorematrix import ProteinScoreMatrix as _ProteinScoreMatrix
@@ -137,9 +138,23 @@ class Aligner:
         if do_affine is None:
             do_affine = self.__do_affine
 
+        if isinstance(ref, SeqRecord):
+            ref_ = str(ref.seq)
+        elif isinstance(ref, Seq):
+            ref_ = str(ref)
+        else:
+            ref_ = ref
+
+        if isinstance(query, SeqRecord):
+            query_ = str(query.seq)
+        elif isinstance(query, Seq):
+            query_ = str(query)
+        else:
+            query_ = query
+
         score, ref_aligned, query_aligned = _align(
-            ref.encode('utf8'),
-            query.encode('utf8'),
+            ref_,
+            query_,
             self.__nchars,
             self.__char_map,
             self.__score_matrix,
@@ -158,7 +173,32 @@ class Aligner:
             self.__codon3x1
             )
 
-        ref_aligned_ = ref_aligned.decode('utf8')
-        query_aligned_ = query_aligned.decode('utf8')
+        if isinstance(ref, SeqRecord):
+            ref_aligned_ = SeqRecord(
+                Seq(ref_aligned, ref.seq.alphabet),
+                id=ref.id,
+                name=ref.name,
+                description=ref.description,
+                dbxrefs=ref.dbxrefs,
+                annotations=ref.annotations
+                )
+        elif isinstance(ref, Seq):
+            ref_aligned_ = Seq(ref_aligned, ref.seq.alphabet)
+        else:
+            ref_aligned_ = ref_aligned
+
+        if isinstance(query, SeqRecord):
+            query_aligned_ = SeqRecord(
+                Seq(query_aligned, query.seq.alphabet),
+                id=query.id,
+                name=query.name,
+                description=query.description,
+                dbxrefs=query.dbxrefs,
+                annotations=query.annotations
+                )
+        elif isinstance(query, Seq):
+            query_aligned_ = Seq(query_aligned, query.seq.alphabet)
+        else:
+            query_aligned_ = query_aligned
 
         return score, ref_aligned_, query_aligned_
