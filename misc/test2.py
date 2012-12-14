@@ -1,4 +1,6 @@
 
+from __future__ import division, print_function
+
 from BioExt.scorematrix import HIV_BETWEEN_F
 from BioExt.aligner import Aligner
 

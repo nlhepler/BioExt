@@ -1,4 +1,6 @@
 
+from __future__ import division, print_function
+
 from os.path import join
 
 from BioExt.references._factory import _refdir, _reffactory

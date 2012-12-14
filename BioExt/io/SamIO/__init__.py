@@ -1,4 +1,6 @@
 
+from __future__ import division, print_function
+
 from hashlib import md5
 from re import compile as re_compile
 

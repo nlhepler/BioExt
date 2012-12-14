@@ -1,3 +1,6 @@
+
+from __future__ import division, print_function
+
 from time import time
 
 from Bio import Phylo as _Phylo
