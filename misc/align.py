@@ -23,10 +23,14 @@ def main(reffile, seqsfile, outfile):
         ref = SeqIO.read(fh, 'fasta')
 
     with open(seqsfile) as fh:
-        results = Parallel(n_jobs=-1, verbose=0)(
-            delayed(align)(aln, ref, seq)
-            for seq in SeqIO.parse(fh, 'fasta')
-            )
+        results = Parallel(
+            n_jobs=-1,
+            verbose=0,
+            pre_dispatch='10*n_jobs'
+            )(
+                delayed(align)(aln, ref, seq)
+                for seq in SeqIO.parse(fh, 'fasta')
+                )
 
         scores, seqs = zip(*results)
 
