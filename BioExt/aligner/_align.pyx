@@ -46,6 +46,7 @@ cdef extern from "alignment.h":
 
 
 @cython.boundscheck(False)
+@cython.wraparound(False)
 def choose(itype_t n, itype_t k):
     cdef itype_t i
     cdef dtype_t r
@@ -56,6 +57,7 @@ def choose(itype_t n, itype_t k):
     return r
 
 @cython.boundscheck(False)
+@cython.wraparound(False)
 def _compute_codon_matrices(dtype_t[:, :] cost_matrix):
 
     cdef itype_t cdn1, cdn2, i, j, k, l
@@ -112,6 +114,7 @@ def _compute_codon_matrices(dtype_t[:, :] cost_matrix):
             codon3x1[cdn1, 3 * i + 2] = max001 - penalty3x1
 
     return codon3x5, codon3x4, codon3x2, codon3x1
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)

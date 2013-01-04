@@ -46,6 +46,7 @@ class Aligner:
             open_deletion=None,
             extend_deletion=None,
             miscall_cost=None,
+            expected_identity=None,
             do_local=True,
             do_affine=True,
             do_codon=True
@@ -80,6 +81,12 @@ class Aligner:
         if miscall_cost is None:
             miscall_cost = min_score
 
+        # compute the expected score, if necessary
+        expected_score = Aligner.__expected_score(
+            score_matrix,
+            expected_identity
+            )
+
         letters = letters.encode('utf8')
         char_map = np.zeros((256,), dtype=int)
         # this ensures that no matter context,
@@ -97,12 +104,14 @@ class Aligner:
 
         self.__nchars = len(letters)
         self.__char_map = char_map
-        self.__score_matrix = score_matrix_
+        self.__score_matrix = score_matrix
+        self.__score_matrix_ = score_matrix_
         self.__open_insertion = open_insertion
         self.__extend_insertion = extend_insertion
         self.__open_deletion = open_deletion
         self.__extend_deletion = extend_deletion
         self.__miscall_cost = miscall_cost
+        self.__expected_score = expected_score
         self.__do_local = do_local
         self.__do_affine = do_affine
         self.__do_codon = do_codon
@@ -110,6 +119,34 @@ class Aligner:
         self.__codon3x4 = codon3x4
         self.__codon3x2 = codon3x2
         self.__codon3x1 = codon3x1
+
+    @staticmethod
+    def __expected_score(score_matrix, expected_identity):
+        # compute expected per position score, if necessary
+        if expected_identity is None:
+            expected_score = None
+        else:
+            N = len(score_matrix.letters)
+            freqs = list(score_matrix.freqs().values())
+            expected_score = 0.0
+            pair_norm = 1.0 / (1.0 - sum(v ** 2 for v in freqs))
+            for i in range(N):
+                for j in range(N):
+                    if i != j:
+                        expected_score += (
+                            (1 - expected_identity) *
+                            score_matrix[i, j] *
+                            freqs[i] *
+                            freqs[j] *
+                            pair_norm
+                            )
+                    else:
+                        expected_score += (
+                            expected_identity *
+                            score_matrix[i, j] *
+                            freqs[i]
+                            )
+        return expected_score
 
     def __call__(
             self,
@@ -159,8 +196,8 @@ class Aligner:
             query_,
             self.__nchars,
             self.__char_map,
-            self.__score_matrix,
-            self.__score_matrix.shape[0],
+            self.__score_matrix_,
+            self.__score_matrix_.shape[0],
             open_insertion,
             extend_insertion,
             open_deletion,
@@ -203,4 +240,20 @@ class Aligner:
         else:
             query_aligned_ = query_aligned
 
+        # normalize score to per-position
+        score /= len(query_) / 3 if self.__do_codon else len(query_)
+
         return score, ref_aligned_, query_aligned_
+
+    def expected(self, score, expected_identity=None):
+        if expected_identity is None:
+            expected_score = self.__expected_score
+        else:
+            expected_score = Aligner.__expected_score(
+                self.__score_matrix,
+                expected_identity
+                )
+        if expected_score is None:
+            return True
+        else:
+            return score >= expected_score

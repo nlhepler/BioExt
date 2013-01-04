@@ -15,9 +15,12 @@ def align(aln, ref, seq):
     seq_ = compute_cigar(ref, seq)
     return score, seq_
 
-def main(reffile, seqsfile, outfile):
+def main(reffile, seqsfile, outfile, expected_identity=None):
+    if expected_identity is not None:
+        expected_identity = float(expected_identity)
+
     hbf = HIV_BETWEEN_F.load()
-    aln = Aligner(hbf)
+    aln = Aligner(hbf, expected_identity=expected_identity)
 
     with open(reffile) as fh:
         ref = SeqIO.read(fh, 'fasta')
@@ -32,10 +35,16 @@ def main(reffile, seqsfile, outfile):
                 for seq in SeqIO.parse(fh, 'fasta')
                 )
 
-        scores, seqs = zip(*results)
-
     with open(outfile, 'wb') as fh:
-        BamIO.write(seqs, fh, ref)
+        BamIO.write(
+            (
+                seq
+                for score, seq in results
+                if aln.expected(score)
+                ),
+            fh,
+            ref
+            )
 
     BamIO.sort(outfile)
 

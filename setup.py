@@ -37,7 +37,7 @@ setup(
     packages=[
         'BioExt',
         'BioExt.aligner',
-        'BioExt.counter',
+        'BioExt.collections',
         'BioExt.errorize',
         'BioExt.io',
         'BioExt.io.BamIO',
@@ -53,7 +53,7 @@ setup(
     package_dir={
         'BioExt': 'BioExt',
         'BioExt.aligner': 'BioExt/aligner',
-        'BioExt.counter': 'BioExt/counter',
+        'BioExt.collections': 'BioExt/collections',
         'BioExt.errorize': 'BioExt/errorize',
         'BioExt.io': 'BioExt/io',
         'BioExt.io.BamIO': 'BioExt/io/BamIO',

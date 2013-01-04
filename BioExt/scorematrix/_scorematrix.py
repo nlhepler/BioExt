@@ -8,6 +8,8 @@ from warnings import warn
 
 import numpy as np
 
+from BioExt.collections import OrderedDict
+
 
 __all__ = [
     'DNA65',
@@ -52,6 +54,17 @@ def parse_scorematrix(smpath):
             return klass([[W[i][j] for j in cols] for i in rows])
         else:
             return klass(W)
+
+
+def _normalize(matrix):
+    max_ = matrix.max()
+    min_ = matrix.min()
+    if max_ == min_:
+        matrix[:] = 0.5
+    else:
+        matrix -= min_
+        matrix /= max_ - min_
+    return matrix
 
 
 class ScoreMatrix(object):
@@ -110,6 +123,42 @@ class ScoreMatrix(object):
                 l = r if r not in alph else q
                 warn("unknown letter '%s', ignoring" % l)
         return score
+
+    def freqs(self, bias=None):
+        from scipy.linalg import eig
+
+        N = len(self.__letters)
+        unif = 1 / N
+
+        if bias is None:
+            bias = 10 ** int(np.log10(unif) // 1)
+        elif bias < 0 or bias > unif:
+            raise ValueError(
+                'bias must be a probability between [0, {0}]'.format(unif)
+                )
+
+        matrix = self.tondarray()
+        # convert to rate matrix
+        matrix = np.subtract(matrix.T, matrix[np.eye(N, dtype=bool)]).T
+        matrix = np.divide(matrix.T, matrix.sum(axis=1)).T
+        # compute left eigenvectors
+        w, vl, _ = eig(matrix, left=True)
+        # extract the frequencies
+        freqs = vl.T[np.abs(w - 1) < 1e-7].reshape((N,))
+
+        # handle bias
+        if any(freqs < bias):
+            freqs -= freqs.min()
+            bias_ = bias * freqs.sum() / (1.0 - N * bias)
+            freqs += bias_
+
+        # normalize
+        freqs /= freqs.sum()
+
+        if freqs.dtype == complex:
+            freqs = (f.real for f in freqs)
+
+        return OrderedDict(zip(self.__letters, freqs))
 
 
 class DNAScoreMatrix(ScoreMatrix):
