@@ -23,7 +23,7 @@ def main(reffile, seqsfile, outfile, expected_identity=None):
     aln = Aligner(hbf, expected_identity=expected_identity)
 
     with open(reffile) as fh:
-        ref = SeqIO.read(fh, 'fasta')
+        ref = next(SeqIO.parse(fh, 'fasta'))
 
     with open(seqsfile) as fh:
         results = Parallel(
