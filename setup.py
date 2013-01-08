@@ -41,6 +41,7 @@ setup(
         'BioExt.errorize',
         'BioExt.io',
         'BioExt.io.BamIO',
+        'BioExt.io.LazyAlignIO',
         'BioExt.io.SamIO',
         'BioExt.misc',
         'BioExt.orflist',
@@ -57,6 +58,7 @@ setup(
         'BioExt.errorize': 'BioExt/errorize',
         'BioExt.io': 'BioExt/io',
         'BioExt.io.BamIO': 'BioExt/io/BamIO',
+        'BioExt.io.LazyAlignIO': 'BioExt/io/LazyAlignIO',
         'BioExt.io.SamIO': 'BioExt/io/SamIO',
         'BioExt.misc': 'BioExt/misc',
         'BioExt.orflist': 'BioExt/orflist',
@@ -72,5 +74,8 @@ setup(
             ] + _installrefdirs
         },
     ext_modules=ext_modules,
-    requires=['Bio (>=1.58)', 'numpy (>=1.6)']
+    requires=[
+        'Bio (>=1.58)',
+        'numpy (>=1.6)',
+        ]
     )
