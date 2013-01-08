@@ -191,6 +191,14 @@ class Aligner:
         else:
             query_ = query
 
+        # convert to uppercase, because _align assumes it
+        ref_ = ref_.upper()
+        query_ = query_.upper()
+
+        # if do_codon, the query's length needs to be a multiple of 3
+        if self.__do_codon and len(query_) % 3 != 0:
+            query_ += 'N' * (3 - len(query_) % 3)
+
         score, ref_aligned, query_aligned = _align(
             ref_,
             query_,

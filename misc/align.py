@@ -29,7 +29,7 @@ def main(reffile, seqsfile, outfile, expected_identity=None):
         results = Parallel(
             n_jobs=-1,
             verbose=0,
-            pre_dispatch='10*n_jobs'
+            pre_dispatch='2 * n_jobs'
             )(
                 delayed(align)(aln, ref, seq)
                 for seq in SeqIO.parse(fh, 'fasta')

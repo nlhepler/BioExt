@@ -51,11 +51,11 @@ def write(records, handle, reference, new_style=False):
 
 def sort(path):
     try:
-        fd, new_path = mkstemp(); close(fd)
+        fd, tmp_path = mkstemp(); close(fd)
 
-        samtools_sort(path, new_path)
-        new_path += '.bam' # sort adds the .bam suffix automatically
-        move(new_path, path)
+        samtools_sort(path, tmp_path)
+        tmp_path += '.bam' # sort adds the .bam suffix automatically
+        move(tmp_path, path)
     finally:
-        if exists(new_path):
-            remove(new_path)
+        if exists(tmp_path):
+            remove(tmp_path)
