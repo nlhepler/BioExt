@@ -49,6 +49,7 @@ setup(
         'BioExt.references',
         'BioExt.scorematrix',
         'BioExt.stats',
+        'BioExt.uds',
         'BioExt.untranslate'
         ],
     package_dir={
@@ -66,6 +67,7 @@ setup(
         'BioExt.references': 'BioExt/references',
         'BioExt.scorematrix': 'BioExt/scorematrix',
         'BioExt.stats': 'BioExt/stats',
+        'BioExt.uds': 'BioExt/uds',
         'BioExt.untranslate': 'BioExt/untranslate'
         },
     package_data={
