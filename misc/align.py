@@ -2,12 +2,11 @@
 
 from __future__ import division, print_function
 
-from sklearn.externals.joblib import delayed, Parallel
-
 from Bio import SeqIO
 
 from BioExt.aligner import Aligner
 from BioExt.io import BamIO
+from BioExt.joblib import Parallel, delayed
 from BioExt.misc import compute_cigar
 from BioExt.scorematrix import HIV_BETWEEN_F
 

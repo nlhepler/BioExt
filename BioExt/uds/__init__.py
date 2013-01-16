@@ -6,9 +6,8 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from BioExt.aligner import Aligner
+from BioExt.joblib import Parallel, delayed
 from BioExt.misc import _GAP, by_codon
-
-from sklearn.externals.joblib import Parallel, delayed
 
 
 __all__ = [
