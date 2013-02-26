@@ -26,9 +26,9 @@ def set_globals(*args):
 
 
 def main(
-    ref,
     input_handle,
     output_handle,
+    reference,
     expected_identity,
     do_codon,
     dna_score_matrix,
@@ -47,14 +47,20 @@ def main(
         do_codon=do_codon
         )
 
-    ref_ = Array(c_char, str(ref.seq).encode('utf-8'))
+    seqs = SeqIO.parse(input_handle, 'fasta')
+
+    # grab the first
+    if reference is None:
+        reference = next(seqs)
+
+    reference_ = Array(c_char, str(reference.seq).encode('utf-8'))
 
     def keep(score, seq):
         if aln.expected(score):
             return True
-        else:
+        elif discard_handle:
             SeqIO.write([seq], discard_handle, 'fasta')
-            return False
+        return False
 
     BamIO.write(
         (
@@ -66,17 +72,17 @@ def main(
                 initializer=set_globals,
                 initargs=[
                     ('aln', aln),
-                    ('ref', ref_),
-                    ('ref_name', ref.name)
+                    ('ref', reference_),
+                    ('ref_name', reference.name)
                     ]
                 ).lazy(
                     delayed(align)(seq)
-                    for seq in SeqIO.parse(input_handle, 'fasta')
+                    for seq in seqs
                     )
             if keep(score, seq)
             ),
         output_handle,
-        ref
+        reference
         )
 
     BamIO.sort(output_handle.name)
@@ -154,12 +160,6 @@ if __name__ == '__main__':
         )
 
     parser.add_argument(
-        'reference',
-        metavar='REFERENCE',
-        type=reference,
-        help='REFERENCE FASTA file'
-        )
-    parser.add_argument(
         'input',
         metavar='INPUT',
         type=argparse.FileType('r'),
@@ -170,6 +170,12 @@ if __name__ == '__main__':
         metavar='OUTPUT',
         type=argparse.FileType('wb'),
         help='send BAM to OUTPUT'
+        )
+    parser.add_argument(
+        '-r', '--reference',
+        metavar='REFERENCE',
+        type=reference,
+        help='REFERENCE FASTA file or {{{0}}}'.format(','.join(references.keys()))
         )
     parser.add_argument(
         '-e', '--expected-identity',
@@ -197,9 +203,9 @@ if __name__ == '__main__':
         )
     parser.add_argument(
         '-D', '--discard',
-        metavar='DISCARDFILE',
+        metavar='DISCARD',
         type=argparse.FileType('w'),
-        help='discarded sequences are sent to DISCARDFILE'
+        help='discarded sequences are sent to DISCARD'
         )
 
     args = None
@@ -207,9 +213,9 @@ if __name__ == '__main__':
     try:
         args = parser.parse_args()
         retcode = main(
-            args.reference,
             args.input,
             args.output,
+            args.reference,
             args.expected_identity,
             args.do_codon,
             dna_score_matrices[args.dna_score_matrix],

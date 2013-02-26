@@ -2,11 +2,14 @@
 from __future__ import division, print_function
 
 from os import close, remove
-from os.path import exists
+from os.path import exists, getsize
 from shutil import move
 from tempfile import mkstemp
 
-from pysam import view as samtools_view, sort as samtools_sort
+from pysam import (
+    view as samtools_view,
+    sort as samtools_sort
+    )
 
 from BioExt.io.SamIO import parse as sam_parse, write as sam_write
 
@@ -42,20 +45,25 @@ def write(records, handle, reference, new_style=False):
         fd, path = mkstemp(); close(fd)
 
         with open(path, 'w') as fh:
-            sam_write(records, fh, reference, new_style)
+            count = sam_write(records, fh, reference, new_style)
 
-        handle.write(samtools_view('-bS', path))
+        if count:
+            handle.write(samtools_view('-bS', path))
     finally:
         if exists(path):
             remove(path)
+
+    return count
+
 
 def sort(path):
     try:
         fd, tmp_path = mkstemp(); close(fd)
 
-        samtools_sort(path, tmp_path)
-        tmp_path += '.bam' # sort adds the .bam suffix automatically
-        move(tmp_path, path)
+        if exists(path) and getsize(path):
+            samtools_sort(path, tmp_path)
+            tmp_path += '.bam'  # sort adds the .bam suffix automatically
+            move(tmp_path, path)
     finally:
         if exists(tmp_path):
             remove(tmp_path)

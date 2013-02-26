@@ -97,6 +97,7 @@ def write(records, handle, reference=None, new_style=False):
             for record in records:
                 yield record
 
+    count = 0
     for record in iterate(records):
         # retrieve the optional annotations
         flag = record.annotations.get('sam_flag', 0)
@@ -127,3 +128,7 @@ def write(records, handle, reference=None, new_style=False):
         # write!
         handle.write('\t'.join(fields))
         handle.write('\n')
+        # increment!
+        count += 1
+
+    return count
