@@ -66,19 +66,19 @@ def randgene(length, ppf):
         lp = round(ppf(random())) + 1
         # avoid stop codons
         if l % 3 == 1 and n1 == 3 and lp > 1:
-            avoid = 0 # TAA (3, 0, 0)
+            avoid = 0  # TAA (3, 0, 0)
         elif l % 3 == 2 and n2 == 3:
             if n1 == 0:
-                avoid = 2 # TAG (3, 0, 2)
+                avoid = 2  # TAG (3, 0, 2)
             elif n1 == 2:
-                avoid = 0 # TGA (3, 2, 0)
+                avoid = 0  # TGA (3, 2, 0)
         # avoid the last character and stop codons
         while c == n1 or c == avoid:
             c = randint(0, 3)
         # setup state
-        n2 = n1 # negative 1 to negative 2
-        n1 = c # negative 1 to char
-        avoid = -1 # reset avoid
+        n2 = n1  # negative 1 to negative 2
+        n1 = c  # negative 1 to char
+        avoid = -1  # reset avoid
         # grow seq
         s.append('ACGT'[c] * lp)
         l += lp
@@ -102,9 +102,9 @@ def intersperse(iterable, delimiter, n=1):
     if n < 1:
         msg = "cannot intersperse every n = '%d' < 1 elements" % n
         raise ValueError(msg)
-    n -= 1 # we yield a value manually, so yield in n - 1 groups
+    n -= 1  # we yield a value manually, so yield in n - 1 groups
     it = iter(iterable)
-    yield next(it) # yield manually
+    yield next(it)  # yield manually
     while True:
         for _ in range(n):
             yield next(it)
@@ -113,7 +113,7 @@ def intersperse(iterable, delimiter, n=1):
         # terminal delimiters
         saved = next(it)
         yield delimiter
-        yield saved # yield manually
+        yield saved  # yield manually
 
 
 def by_codon(seq, gap_char=_GAP):
@@ -238,7 +238,11 @@ def translate_ambiguous(seq, gap_char=_GAP, trim_gaps=True):
     return AmbigList(aminos)
 
 
-def compute_cigar(reference, record, new_style=False):
+def compute_cigar(reference, record, reference_name=None, new_style=False):
+
+    if reference_name is None:
+        reference_name = reference.name
+
     ncol = len(record)
 
     # find start, end of record in the ref
@@ -267,15 +271,15 @@ def compute_cigar(reference, record, new_style=False):
             # if both are gaps, skip
             pass
         elif ref in _GAPS:
-            m = 'I' # insertion
+            m = 'I'  # insertion
             edit_distance += 1
         elif query in _GAPS:
-            m = 'D' # deletion
+            m = 'D'  # deletion
             edit_distance += 1
         elif ref == query:
-            m = MATCH # match
+            m = MATCH  # match
         else:
-            m = MISMATCH # mismatch
+            m = MISMATCH  # mismatch
             edit_distance += 1
         # cigar handling
         if not mode:
@@ -293,8 +297,8 @@ def compute_cigar(reference, record, new_style=False):
     # inject the annotations and yield
     record.annotations['CIGAR'] = cigar
     record.annotations['edit_distance'] = edit_distance
-    record.annotations['position'] = start + 1 # 1-indexed
+    record.annotations['position'] = start + 1  # 1-indexed
     record.annotations['length'] = end - start
-    record.annotations['reference_name'] = reference.name
+    record.annotations['reference_name'] = reference_name
 
     return record

@@ -77,6 +77,7 @@ setup(
             'data/scorematrices/*.txt'
             ] + _installrefdirs
         },
+    scripts=['scripts/bealign'],
     ext_modules=ext_modules,
     requires=[
         'Bio (>=1.58)',

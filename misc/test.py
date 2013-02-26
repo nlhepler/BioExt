@@ -16,6 +16,7 @@ buf = cStringIO("((((((variant_2_57_copies:1e-10,variant_7_339_copies:1e-10):0.0
 
 N = 5000
 
+
 def distance_matrix(tree):
     leaves = tree.get_terminals()
     dmat = np.zeros((len(leaves), len(leaves)), dtype=float)
@@ -25,6 +26,7 @@ def distance_matrix(tree):
                 dmat[i, j] = tree.distance(leaves[i], leaves[j])
     return dmat
 
+
 def benchmark_read(cls):
     a = time()
     for _ in range(N):
@@ -32,6 +34,7 @@ def benchmark_read(cls):
         tree = cls.read(buf, 'newick')
     b = time()
     print('%d iterations took %g seconds' % (N, b - a))
+
 
 def benchmark_dmat(cls):
     buf.seek(0)
@@ -42,12 +45,14 @@ def benchmark_dmat(cls):
     b = time()
     print('%d iterations took %g seconds' % (N, b - a))
 
+
 def print_stuff(cls):
     buf.seek(0)
     tree = cls.read(buf, 'newick')
     print(tree)
     print(tree.get_terminals())
     print(distance_matrix(tree))
+
 
 benchmark_read(_Phylo)
 benchmark_dmat(_Phylo)

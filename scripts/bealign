@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+
+from __future__ import division, print_function
+
+from ctypes import c_char
+from multiprocessing import Array
+
+from Bio import SeqIO
+
+from BioExt.aligner import Aligner
+from BioExt.io import BamIO
+from BioExt.joblib import Parallel, delayed
+from BioExt.misc import compute_cigar
+
+
+# aln, ref, and ref_name are set by set_globals below
+def align(seq):
+    score, ref_, seq = aln(ref.value.decode('utf-8'), seq)
+    seq_ = compute_cigar(ref_, seq, ref_name)
+    return score, seq_
+
+
+def set_globals(*args):
+    for key, value in args:
+        globals()[key] = value
+
+
+def main(
+    ref,
+    input_handle,
+    output_handle,
+    expected_identity,
+    do_codon,
+    dna_score_matrix,
+    protein_score_matrix,
+    discard_handle
+    ):
+
+    if do_codon:
+        score_matrix = protein_score_matrix
+    else:
+        score_matrix = dna_score_matrix
+
+    aln = Aligner(
+        score_matrix=score_matrix,
+        expected_identity=expected_identity,
+        do_codon=do_codon
+        )
+
+    ref_ = Array(c_char, str(ref.seq).encode('utf-8'))
+
+    def keep(score, seq):
+        if aln.expected(score):
+            return True
+        else:
+            SeqIO.write([seq], discard_handle, 'fasta')
+            return False
+
+    BamIO.write(
+        (
+            seq
+            for score, seq in Parallel(
+                n_jobs=-1,
+                verbose=0,
+                pre_dispatch='3 * n_jobs',  # triple-buffering
+                initializer=set_globals,
+                initargs=[
+                    ('aln', aln),
+                    ('ref', ref_),
+                    ('ref_name', ref.name)
+                    ]
+                ).lazy(
+                    delayed(align)(seq)
+                    for seq in SeqIO.parse(input_handle, 'fasta')
+                    )
+            if keep(score, seq)
+            ),
+        output_handle,
+        ref
+        )
+
+    BamIO.sort(output_handle.name)
+
+    return 0
+
+
+if __name__ == '__main__':
+    import argparse
+    import sys
+
+    from os import remove
+    from os.path import getsize
+
+    from BioExt.references import hxb2, nl4_3
+
+    import BioExt.scorematrix
+
+    references = {
+        'HXB2_env': hxb2.env,
+        'HXB2_gag': hxb2.gag,
+        'HXB2_int': hxb2.int,
+        'HXB2_nef': hxb2.nef,
+        'HXB2_pol': hxb2.pol,
+        'HXB2_pr': hxb2.pr,
+        'HXB2_prrt': hxb2.prrt,
+        'HXB2_rev': hxb2.rev,
+        'HXB2_rt': hxb2.rt,
+        'HXB2_tat': hxb2.tat,
+        'HXB2_vif': hxb2.vif,
+        'HXB2_vpr': hxb2.vpr,
+        'HXB2_vpu': hxb2.vpu,
+        'NL4-3_prrt': nl4_3.prrt
+        }
+
+    protein_score_matrices = {}
+    dna_score_matrices = {}
+    for sm in dir(BioExt.scorematrix):
+        sm_ = getattr(BioExt.scorematrix, sm)
+        try:
+            sm_ = sm_.load()
+            if isinstance(sm_, BioExt.scorematrix.DNAScoreMatrix):
+                dna_score_matrices[sm] = sm_
+            elif isinstance(sm_, BioExt.scorematrix.ProteinScoreMatrix):
+                protein_score_matrices[sm] = sm_
+        except (AttributeError, TypeError):
+            continue
+
+    def reference(string):
+        if string in references:
+            return references[string].load()
+        try:
+            with open(string) as handle:
+                ref = next(SeqIO.parse(handle, 'fasta'))
+            return ref
+        except:
+            msg = "'{0}' does not exist or is not a valid FASTA file".format(string)
+            raise argparse.ArgumentTypeError(msg)
+
+    def probability(string):
+        try:
+            p = float(string)
+            if p < 0 or p > 1:
+                raise ValueError()
+            return p
+        except ValueError:
+            msg = "'{0}' is not a probability in [0, 1]".format(string)
+            raise argparse.ArgumentTypeError(msg)
+
+    parser = argparse.ArgumentParser(
+        description=(
+            'align sequences to a reference using '
+            'a codon alignment algorithm and output to a BAM file'
+            )
+        )
+
+    parser.add_argument(
+        'reference',
+        metavar='REFERENCE',
+        type=reference,
+        help='REFERENCE FASTA file'
+        )
+    parser.add_argument(
+        'input',
+        metavar='INPUT',
+        type=argparse.FileType('r'),
+        help='INPUT FASTA file'
+        )
+    parser.add_argument(
+        'output',
+        metavar='OUTPUT',
+        type=argparse.FileType('wb'),
+        help='send BAM to OUTPUT'
+        )
+    parser.add_argument(
+        '-e', '--expected-identity',
+        type=probability,
+        default=0.,
+        help='discard sequences that are insufficiently identical to the reference'
+        )
+    parser.add_argument(
+        '-n', '--no-codon',
+        dest='do_codon',
+        action='store_false',
+        help="don't use codon-aware alignment algorithm"
+        )
+    parser.add_argument(
+        '-d', '--dna-score-matrix',
+        choices=sorted(dna_score_matrices.keys()),
+        default='DNA65',
+        help='use a specific scoring matrix [default=DNA65]'
+        )
+    parser.add_argument(
+        '-p', '--protein-score-matrix',
+        choices=sorted(protein_score_matrices.keys()),
+        default='BLOSUM62',
+        help='use a specific scoring matrix [default=BLOSUM62]'
+        )
+    parser.add_argument(
+        '-D', '--discard',
+        metavar='DISCARDFILE',
+        type=argparse.FileType('w'),
+        help='discarded sequences are sent to DISCARDFILE'
+        )
+
+    args = None
+    retcode = -1
+    try:
+        args = parser.parse_args()
+        retcode = main(
+            args.reference,
+            args.input,
+            args.output,
+            args.expected_identity,
+            args.do_codon,
+            dna_score_matrices[args.dna_score_matrix],
+            protein_score_matrices[args.protein_score_matrix],
+            args.discard
+        )
+    finally:
+        if args is not None:
+            # close input file handle
+            if args.input and args.input != sys.stdin:
+                args.input.close()
+            # close and remove empty output file handles
+            for handle in (args.output, args.discard):
+                if handle and handle != sys.stdout:
+                    handle.close()
+                    try:
+                        if getsize(handle.name) == 0:
+                            remove(handle.name)
+                    except:
+                        pass
+
+    sys.exit(retcode)
