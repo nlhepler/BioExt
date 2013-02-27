@@ -144,11 +144,14 @@ def _align(
     cdef char * ref = b_ref
     cdef char * query = b_query
 
-    cdef char * ref_aligned
-    cdef char * query_aligned
+    cdef char * ref_aligned = NULL
+    cdef char * query_aligned = NULL
     cdef unicode u_ref_aligned
     cdef unicode u_query_aligned
     cdef dtype_t score
+
+    if do_codon and len(u_ref) % 3 != 0:
+        raise ValueError('when do_codon = True, len(ref) must be a multiple of 3')
 
     try:
         score = AlignStrings(

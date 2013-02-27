@@ -606,7 +606,9 @@ double AlignStrings( char * const r_str
     double score = 0.;
 
     if ( do_codon && ( r_len % 3 != 0 ) ) {
-        return -A_LARGE_NUMBER;
+        *r_res = NULL;
+        *q_res = NULL;
+        return -A_LARGE_NUMBER; 
     }
 
     // handle some corner cases,
@@ -962,7 +964,10 @@ double AlignStrings( char * const r_str
 
                     // if anything drops below 0, something bad happened
                     if ( i < 0 || j < 0 ) {
-                        return -A_LARGE_NUMBER;
+                        *r_res = NULL;
+                        *q_res = NULL;
+                        score = -A_LARGE_NUMBER;
+                        goto end;
                     }
 
                     // handle the affine cases
@@ -1108,8 +1113,8 @@ double AlignStrings( char * const r_str
                 i = j = 0;
                 // rebuild the strings from the edit_ops
                 // with room for the null terminator
-                *r_res = (char *) ALLOCA( char, edit_ptr + 1 );
-                *q_res = (char *) ALLOCA( char, edit_ptr + 1 );
+                *r_res = ALLOCA( char, edit_ptr + 1 );
+                *q_res = ALLOCA( char, edit_ptr + 1 );
 
                 if ( ISNULL( *r_res ) || ISNULL( *q_res ) ) {
                     free( *r_res );
@@ -1159,12 +1164,8 @@ double AlignStrings( char * const r_str
 end:
             free( edit_ops );
             free( score_matrix );
-
-            if ( do_affine ) {
-                free( insertion_matrix );
-                free( deletion_matrix );
-            }
-
+            free( insertion_matrix );
+            free( deletion_matrix );
             free( r_enc );
             free( q_enc );
         }

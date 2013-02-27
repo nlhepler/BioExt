@@ -52,7 +52,7 @@ def parse(handle):
             letter_annotations = {}
             letter_annotations['phred_quality'] = [ord(q) - 33 for q in qual]
         else:
-            letter_annotations=None
+            letter_annotations = None
 
         record = SeqRecord(
             Seq(seq, single_letter_alphabet),
@@ -69,14 +69,14 @@ def parse(handle):
 def write(records, handle, reference=None, new_style=False):
     re_alph = re_compile(r'[^A-Z]')
 
-    #header lines
-    handle.write('@HD\tVN:1.4\tSO:unknown\n')
+    # header lines
+    header = ['@HD\tVN:1.4\tSO:unknown\n']
     if reference is not None:
         reflen = len(reference)
         refname = reference.name
         hasher = md5()
         hasher.update(re_alph.sub('', str(reference.seq).upper()).encode('utf8'))
-        handle.write(
+        header.append(
             '@SQ\tSN:%s\tLN:%d\tM5:%s\n' % (
                 refname,
                 reflen,
@@ -99,6 +99,12 @@ def write(records, handle, reference=None, new_style=False):
 
     count = 0
     for record in iterate(records):
+        # print the header before the first record
+        if header:
+            for line in header:
+                handle.write(line)
+            header = None
+
         # retrieve the optional annotations
         flag = record.annotations.get('sam_flag', 0)
         mapq = record.annotations.get('mapping_quality', 255)

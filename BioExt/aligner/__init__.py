@@ -195,6 +195,9 @@ class Aligner:
         ref_ = ref_.upper()
         query_ = query_.upper()
 
+        if self.__do_codon and len(ref_) % 3 != 0:
+            raise ValueError('when do_codon = True, len(ref) must be a multiple of 3')
+
         # if do_codon, the query's length needs to be a multiple of 3
         if self.__do_codon and len(query_) % 3 != 0:
             query_ += 'N' * (3 - len(query_) % 3)
