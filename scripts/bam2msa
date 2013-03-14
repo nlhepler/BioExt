@@ -19,7 +19,7 @@ def main(bam_handle, out_handle):
 
     for record in BamIO.parse(bam_handle):
         p = 0
-        seqparts = ['-' * record.annotations['position']]
+        seqparts = ['-' * (record.annotations['position'] - 1)]
         for m in regexp.finditer(record.annotations['CIGAR']):
             num, mode = int(m.group(1)), m.group(2)
             if mode in 'M=X':
