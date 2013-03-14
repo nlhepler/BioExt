@@ -10,7 +10,7 @@ from Bio import SeqIO
 from BioExt.aligner import Aligner
 from BioExt.io import BamIO
 from BioExt.joblib import Parallel, delayed
-from BioExt.misc import compute_cigar
+from BioExt.misc import compute_cigar, gapless
 
 
 # aln, ref, and ref_name are set by set_globals below
@@ -59,9 +59,9 @@ def main(
 
     seqs = SeqIO.parse(input_handle, 'fasta')
 
-    # grab the first
+    # grab the first, make it gapless once and for all
     if reference is None:
-        reference = next(seqs)
+        reference = gapless(next(seqs))
 
     reference_ = Array(c_char, str(reference.seq).encode('utf-8'))
 

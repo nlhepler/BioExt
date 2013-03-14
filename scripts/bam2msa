@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+
+from re import compile as re_compile
+
+from Bio.Alphabet import Gapped
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
+from Bio import AlignIO
+from Bio.Align import MultipleSeqAlignment
+from BioExt.io import BamIO
+
+
+def main(bam_handle, out_handle):
+    regexp = re_compile(r'([0-9]+)([M=XID])')
+
+    alphabet = None
+    seqs = []
+
+    for record in BamIO.parse(bam_handle):
+        p = 0
+        seqparts = ['-' * record.annotations['position']]
+        for m in regexp.finditer(record.annotations['CIGAR']):
+            num, mode = int(m.group(1)), m.group(2)
+            if mode in 'M=X':
+                seqparts.append(str(record.seq[p:(p + num)]))
+            elif mode == 'D':
+                seqparts.append('-' * num)
+            p += num
+        if alphabet is None:
+            alphabet = Gapped(record.seq.alphabet)
+        seqs.append((record.id, record.name, record.description, ''.join(seqparts)))
+
+    length = max(len(seq) for _, _, _, seq in seqs)
+
+    msa = MultipleSeqAlignment(
+        [
+            SeqRecord(
+                Seq(seq + ('-' * (length - len(seq))), alphabet),
+                id=id_,
+                name=name,
+                description=description
+                )
+            for id_, name, description, seq
+            in seqs
+            ],
+        alphabet
+        )
+
+    AlignIO.write(msa, out_handle, 'fasta')
+
+    return 0
+
+
+if __name__ == '__main__':
+    import sys
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description='convert a BAM file to a MSA, removing insertions'
+        )
+
+    parser.add_argument(
+        'input',
+        metavar='INPUT',
+        type=argparse.FileType('rb'),
+        help='input BAM file'
+        )
+    parser.add_argument(
+        'output',
+        default=sys.stdout,
+        metavar='OUTPUT',
+        type=argparse.FileType('w'),
+        help='output FASTA MSA file'
+        )
+
+    args = None
+    retcode = -1
+    try:
+        args = parser.parse_args()
+        retcode = main(args.input, args.output)
+    finally:
+        if args is not None:
+            if args.output != sys.stdout:
+                args.output.close()
+
+    sys.exit(retcode)

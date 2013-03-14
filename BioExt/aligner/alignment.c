@@ -677,8 +677,8 @@ double AlignStrings( char * const r_str
             // don't forget the optional termination character
             signed char * const edit_ops = ALLOCA( signed char, r_len + q_len );
             double * const score_matrix = ALLOCA( double, score_rows * score_cols ),
-                   * const insertion_matrix = do_affine ? ALLOCA( double, score_rows * score_cols ) : NULL,
-                   * const deletion_matrix  = do_affine ? ALLOCA( double, score_rows * score_cols ) : NULL;
+                   * const deletion_matrix  = do_affine ? ALLOCA( double, score_rows * score_cols ) : NULL,
+                   * const insertion_matrix = do_affine ? ALLOCA( double, score_rows * score_cols ) : NULL;
             // encode each string using the character map (char_map)
             long * const r_enc = ALLOCA( long, r_len ),
                  * const q_enc = ALLOCA( long, q_len );
@@ -694,9 +694,23 @@ double AlignStrings( char * const r_str
                 goto end;
             }
 
-            // zero manually, memset not guaranteed to work
-            for ( i = 0; i < score_rows * score_cols; ++i )
+            // if this is set, then 8 0-bytes is equivalent to a 0. double
+#ifdef __STDC_IEC_559__
+            memset( score_matrix, 0, score_rows * score_cols );
+            if ( do_affine ) {
+                memset( deletion_matrix, 0, score_rows * score_cols );
+                memset( insertion_matrix, 0, score_rows * score_cols );
+            }
+#else
+            for ( i = 0; i < score_rows * score_cols; ++i ) {
                 score_matrix[ i ] = 0.;
+            }
+            if ( do_affine )
+                for ( i = 0; i < score_rows * score_cols; ++i ) {
+                    deletion_matrix[ i ] = 0.;
+                    insertion_matrix[ i ] = 0.;
+                }
+#endif
 
             if ( do_codon ) {
                 for ( i = 0; i < r_len; ++i )
@@ -704,14 +718,6 @@ double AlignStrings( char * const r_str
 
                 for ( i = 0; i < q_len; ++i )
                     q_enc[ i ] = char_map[ (int) q_str[ i ] ];
-            }
-
-            if ( do_affine ) {
-                // zero manually, memset not guaranteed to work
-                for ( i = 0; i < score_rows * score_cols; ++i ) {
-                    insertion_matrix[ i ] = 0.;
-                    deletion_matrix[ i ] = 0.;
-                }
             }
 
             // pre-initialize the values in the various matrices
@@ -1164,8 +1170,8 @@ double AlignStrings( char * const r_str
 end:
             free( edit_ops );
             free( score_matrix );
-            free( insertion_matrix );
             free( deletion_matrix );
+            free( insertion_matrix );
             free( r_enc );
             free( q_enc );
         }

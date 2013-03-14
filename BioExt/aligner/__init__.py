@@ -9,6 +9,7 @@ from Bio.Seq import Seq, translate as _translate
 from Bio.SeqRecord import SeqRecord
 
 from BioExt.aligner._align import _align, _compute_codon_matrices
+from BioExt.misc import gapless
 from BioExt.scorematrix import ProteinScoreMatrix as _ProteinScoreMatrix
 
 
@@ -37,6 +38,25 @@ def _protein_to_codon(protein_matrix):
 
 
 class Aligner:
+    __slots__ = (
+        '__nchars',
+        '__char_map',
+        '__score_matrix',
+        '__score_matrix_',
+        '__open_insertion',
+        '__extend_insertion',
+        '__open_deletion',
+        '__extend_deletion',
+        '__miscall_cost',
+        '__expected_score',
+        '__do_local',
+        '__do_affine',
+        '__do_codon',
+        '__codon3x5',
+        '__codon3x4',
+        '__codon3x2',
+        '__codon3x1'
+        )
 
     def __init__(
             self,
@@ -62,7 +82,7 @@ class Aligner:
             score_matrix_ = score_matrix.tondarray()
 
         # set the default extension cost to 7.5% of the range
-        magic = 40 / 3 # magic denominator for 7.5%
+        magic = 40 / 3  # magic denominator for 7.5%
         ext_cost = (score_matrix_.max() - score_matrix_.min()) / magic
         # we take the negation of the minimum,
         # because the implementation assumes these values are penalties,
@@ -82,7 +102,7 @@ class Aligner:
             miscall_cost = min_score
 
         # compute the expected score, if necessary
-        expected_score = Aligner.__expected_score(
+        expected_score = Aligner._expected_score(
             score_matrix,
             expected_identity
             )
@@ -99,8 +119,7 @@ class Aligner:
         if do_codon:
             codon3x5, codon3x4, codon3x2, codon3x1 = _compute_codon_matrices(score_matrix_)
         else:
-            empty = np.zeros((0, 0), dtype=float)
-            codon3x5 = codon3x4 = codon3x2 = codon3x1 = empty
+            codon3x5 = codon3x4 = codon3x2 = codon3x1 = np.zeros((0, 0), dtype=float)
 
         self.__nchars = len(letters)
         self.__char_map = char_map
@@ -121,7 +140,7 @@ class Aligner:
         self.__codon3x1 = codon3x1
 
     @staticmethod
-    def __expected_score(score_matrix, expected_identity):
+    def _expected_score(score_matrix, expected_identity):
         # compute expected per position score, if necessary
         if expected_identity is None:
             expected_score = None
@@ -176,6 +195,9 @@ class Aligner:
             do_local = self.__do_local
         if do_affine is None:
             do_affine = self.__do_affine
+
+        ref = gapless(ref)
+        query = gapless(query)
 
         if isinstance(ref, SeqRecord):
             ref_ = str(ref.seq)
@@ -260,7 +282,7 @@ class Aligner:
         if expected_identity is None:
             expected_score = self.__expected_score
         else:
-            expected_score = Aligner.__expected_score(
+            expected_score = Aligner._expected_score(
                 self.__score_matrix,
                 expected_identity
                 )

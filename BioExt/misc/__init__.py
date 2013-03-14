@@ -7,8 +7,10 @@ try:
 except:
     from collections import UserList
 
+from copy import copy
 from itertools import product
 from random import randint, random
+from re import compile as re_compile
 
 from Bio.Seq import Seq, translate as _translate
 from Bio.SeqRecord import SeqRecord
@@ -25,7 +27,8 @@ __all__ = [
     'AmbigList',
     'translate_ambiguous',
     'translate',
-    'compute_cigar'
+    'compute_cigar',
+    'gapless'
     ]
 
 
@@ -302,3 +305,25 @@ def compute_cigar(reference, record, reference_name=None, new_style=False):
     record.annotations['reference_name'] = reference_name
 
     return record
+
+
+def gapless(seq):
+    regexp = re_compile('[{0}]+'.format(''.join(_GAPS)))
+    if isinstance(seq, str):
+        return regexp.sub('', seq)
+    elif isinstance(seq, Seq):
+        return Seq(regexp.sub('', str(seq)), seq.alphabet)
+    elif isinstance(seq, SeqRecord):
+        # TODO: support features and letter_annotations here
+        return SeqRecord(
+            Seq(regexp.sub('', str(seq.seq)), seq.seq.alphabet),
+            id=seq.id,
+            name=seq.name,
+            dbxrefs=copy(seq.dbxrefs),
+            # features=seq.features,
+            description=seq.description,
+            annotations=copy(seq.annotations)
+            # letter_annotations=seq.letter_annotations
+            )
+    else:
+        raise ValueError('seq must have type SeqRecord, Seq, or str')

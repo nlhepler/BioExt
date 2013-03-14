@@ -14,7 +14,8 @@ from BioExt.references._factory import _installrefdirs
 np_inc = [os.path.join(os.path.dirname(numpy.__file__), 'core', 'include')]
 
 ext_modules = [
-    Extension('BioExt.aligner._align',
+    Extension(
+        'BioExt.aligner._align',
         sources=[
             os.path.join('BioExt', 'aligner', '_align.c'),
             os.path.join('BioExt', 'aligner', 'alignment.c')
@@ -77,7 +78,10 @@ setup(
             'data/scorematrices/*.txt'
             ] + _installrefdirs
         },
-    scripts=['scripts/bealign'],
+    scripts=[
+        'scripts/bealign',
+        'scripts/bam2msa'
+        ],
     ext_modules=ext_modules,
     requires=[
         'Bio (>=1.58)',

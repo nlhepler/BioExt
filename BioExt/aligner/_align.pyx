@@ -8,10 +8,10 @@ from libc.stdlib cimport free
 
 
 dtype = np.float64
-itype = np.long
+itype = np.int
 
 ctypedef np.float64_t dtype_t
-ctypedef np.long_t itype_t
+ctypedef np.int_t itype_t
 
 cdef char GAP
 GAP = '-'
