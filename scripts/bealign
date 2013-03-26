@@ -190,7 +190,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '-e', '--expected-identity',
         type=probability,
-        default=0.,
+        default=None,
         help='discard sequences that are insufficiently identical to the reference'
         )
     parser.add_argument(
