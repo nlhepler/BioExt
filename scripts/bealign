@@ -62,6 +62,14 @@ def main(
     # grab the first, make it gapless once and for all
     if reference is None:
         reference = gapless(next(seqs))
+        def allseqs(seqs):
+            yield compute_cigar(reference, reference)
+            for seq in seqs:
+                yield seq
+    else:
+        def allseqs(seqs):
+            for seq in seqs:
+                yield seq
 
     reference_ = Array(c_char, str(reference.seq).encode('utf-8'))
 
@@ -73,7 +81,7 @@ def main(
         return False
 
     BamIO.write(
-        (
+        allseqs(
             seq
             for score, seq in Parallel(
                 n_jobs=n_jobs,

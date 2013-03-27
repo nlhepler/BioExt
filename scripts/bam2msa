@@ -1,50 +1,21 @@
 #!/usr/bin/env python3
 
-from re import compile as re_compile
-
-from Bio.Alphabet import Gapped
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-
 from Bio import AlignIO
 from Bio.Align import MultipleSeqAlignment
 from BioExt.io import BamIO
+from BioExt.misc import strip_insertions
 
 
 def main(bam_handle, out_handle):
-    regexp = re_compile(r'([0-9]+)([M=XID])')
-
-    alphabet = None
     seqs = []
 
     for record in BamIO.parse(bam_handle):
-        p = 0
-        seqparts = ['-' * (record.annotations['position'] - 1)]
-        for m in regexp.finditer(record.annotations['CIGAR']):
-            num, mode = int(m.group(1)), m.group(2)
-            if mode in 'M=X':
-                seqparts.append(str(record.seq[p:(p + num)]))
-            elif mode == 'D':
-                seqparts.append('-' * num)
-            p += num
-        if alphabet is None:
-            alphabet = Gapped(record.seq.alphabet)
-        seqs.append((record.id, record.name, record.description, ''.join(seqparts)))
+        seqs.append(strip_insertions(record))
 
-    length = max(len(seq) for _, _, _, seq in seqs)
+    length = max(len(seq) for seq in seqs)
 
     msa = MultipleSeqAlignment(
-        [
-            SeqRecord(
-                Seq(seq + ('-' * (length - len(seq))), alphabet),
-                id=id_,
-                name=name,
-                description=description
-                )
-            for id_, name, description, seq
-            in seqs
-            ],
-        alphabet
+        [seq + ('-' * (length - len(seq))) for seq in seqs]
         )
 
     AlignIO.write(msa, out_handle, 'fasta')

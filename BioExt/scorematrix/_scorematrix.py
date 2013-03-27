@@ -71,7 +71,7 @@ class ScoreMatrix(object):
 
     def __init__(self, matrix, letters):
         self.__matrix = matrix
-        self.__letters = ''.join(letters) # make sure it's a string
+        self.__letters = ''.join(letters)  # make sure it's a string
         self.__format = '%% %ds' % max(len(str(d)) for d in chain(*matrix))
 
     @property
@@ -89,7 +89,21 @@ class ScoreMatrix(object):
     def __getitem__(self, key):
         if not isinstance(key, tuple) or len(key) != 2:
             raise KeyError("indexing into a ScoreMatrix requires 2D indices")
-        return self.__matrix[key[0]][key[1]]
+
+        def find(v):
+            if isinstance(v, str):
+                i = self.__letters.find(v)
+                if i < 0:
+                    raise ValueError("'{0}' is not in the alphabet".format(v))
+                return i
+            elif isinstance(v, int):
+                return v
+            else:
+                raise ValueError('key must be an integer index or alphabet character')
+
+        a = find(key[0])
+        b = find(key[1])
+        return self.__matrix[a][b]
 
     def _tohyphy(self, names):
         if not isinstance(names, tuple) or len(names) != 2:
@@ -189,7 +203,7 @@ class DNAExpIdScoreMatrix(DNAScoreMatrix):
         for i, l in enumerate(dletters):
             for j, k in enumerate(dletters):
                 if l == k:
-                    matrix[i][j] = int(round(lam * log(pab  / (freqs[l] * freqs[k]))))
+                    matrix[i][j] = int(round(lam * log(pab / (freqs[l] * freqs[k]))))
                 else:
                     matrix[i][j] = int(round(lam * log(pnab / (freqs[l] * freqs[k]))))
         super(DNAExpIdScoreMatrix, self).__init__(matrix, dletters)

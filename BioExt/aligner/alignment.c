@@ -114,7 +114,7 @@ static long CodonAlignStringsStep( double * const score_matrix
          best_choice = 0,
          i, choice, partial_codons[ 10 ]; // we need to multiply by 3 to get the NUC position
     // 3x5 codon specifications (negative indices)
-    long codon_spec_3x5[ 10 ][ 3 ] = {
+    const long codon_spec_3x5[ 10 ][ 3 ] = {
         { 5, 4, 3 }, // 11100
         { 5, 4, 2 }, // 11010
         { 5, 4, 1 }, // 11001
@@ -127,7 +127,7 @@ static long CodonAlignStringsStep( double * const score_matrix
         { 3, 2, 1 }  // 00111
     };
     // 3x4 codon specifications (negative indices)
-    long codon_spec_3x4[ 4 ][ 3 ] = {
+    const long codon_spec_3x4[ 4 ][ 3 ] = {
         { 4, 3, 2 }, // 1110
         { 4, 3, 1 }, // 1101
         { 4, 2, 1 }, // 1011

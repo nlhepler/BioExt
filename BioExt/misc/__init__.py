@@ -28,7 +28,8 @@ __all__ = [
     'translate_ambiguous',
     'translate',
     'compute_cigar',
-    'gapless'
+    'gapless',
+    'strip_insertions'
     ]
 
 
@@ -308,6 +309,8 @@ def compute_cigar(reference, record, reference_name=None, new_style=False):
 
 
 def gapless(seq):
+    if not any(char in _GAPS for char in seq):
+        return seq
     regexp = re_compile('[{0}]+'.format(''.join(_GAPS)))
     if isinstance(seq, str):
         return regexp.sub('', seq)
@@ -327,3 +330,29 @@ def gapless(seq):
             )
     else:
         raise ValueError('seq must have type SeqRecord, Seq, or str')
+
+
+def strip_insertions(record):
+    regexp = re_compile(r'([0-9]+)([M=XID])')
+    p = 0
+    cigparts = []
+    seqparts = ['-' * (record.annotations['position'] - 1)]
+    for m in regexp.finditer(record.annotations['CIGAR']):
+        num, mode = int(m.group(1)), m.group(2)
+        if mode in 'M=X':
+            cigparts.append(m.group(0))
+            seqparts.append(str(record.seq[p:(p + num)]))
+        elif mode == 'D':
+            seqparts.append('-' * num)
+        if mode != 'D':
+            p += num
+    return SeqRecord(
+        Seq(''.join(seqparts), record.seq.alphabet),
+        id=record.id,
+        name=record.name,
+        dbxrefs=copy(record.dbxrefs),
+        # features = seq.features,
+        description=record.description,
+        annotations=copy(record.annotations),
+        # letter_annotations=record.letter_annotations
+        )

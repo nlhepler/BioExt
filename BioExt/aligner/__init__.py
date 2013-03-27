@@ -9,7 +9,7 @@ from Bio.Seq import Seq, translate as _translate
 from Bio.SeqRecord import SeqRecord
 
 from BioExt.aligner._align import _align, _compute_codon_matrices
-from BioExt.misc import gapless
+from BioExt.misc import enumerate_by_codon, gapless
 from BioExt.scorematrix import ProteinScoreMatrix as _ProteinScoreMatrix
 
 
@@ -199,6 +199,14 @@ class Aligner:
         ref = gapless(ref)
         query = gapless(query)
 
+        # if the reference and query are the same, we can return early
+        if len(ref) and ref == query:
+            if self.__do_codon:
+                score = sum(self.__score_matrix[char, char] for char in _translate(ref))
+            else:
+                score = sum(self.__score_matrix[char, char] for char in ref)
+            return score / len(ref), ref, query
+
         if isinstance(ref, SeqRecord):
             ref_ = str(ref.seq)
         elif isinstance(ref, Seq):
@@ -224,26 +232,29 @@ class Aligner:
         if self.__do_codon and len(query_) % 3 != 0:
             query_ += 'N' * (3 - len(query_) % 3)
 
-        score, ref_aligned, query_aligned = _align(
-            ref_,
-            query_,
-            self.__nchars,
-            self.__char_map,
-            self.__score_matrix_,
-            self.__score_matrix_.shape[0],
-            open_insertion,
-            extend_insertion,
-            open_deletion,
-            extend_deletion,
-            miscall_cost,
-            do_local,
-            do_affine,
-            self.__do_codon,
-            self.__codon3x5,
-            self.__codon3x4,
-            self.__codon3x2,
-            self.__codon3x1
-            )
+        if len(query) == 0:
+            score, ref_aligned, query_aligned = float('-Inf'), ref_, '-' * len(ref_)
+        else:
+            score, ref_aligned, query_aligned = _align(
+                ref_,
+                query_,
+                self.__nchars,
+                self.__char_map,
+                self.__score_matrix_,
+                self.__score_matrix_.shape[0],
+                open_insertion,
+                extend_insertion,
+                open_deletion,
+                extend_deletion,
+                miscall_cost,
+                do_local,
+                do_affine,
+                self.__do_codon,
+                self.__codon3x5,
+                self.__codon3x4,
+                self.__codon3x2,
+                self.__codon3x1
+                )
 
         if isinstance(ref, SeqRecord):
             ref_aligned_ = SeqRecord(
