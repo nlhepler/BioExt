@@ -4,6 +4,7 @@ from __future__ import division, print_function
 
 from ctypes import c_char
 from multiprocessing import Array
+from operator import itemgetter
 
 from Bio import SeqIO
 
@@ -13,9 +14,13 @@ from BioExt.joblib import Parallel, delayed
 from BioExt.misc import compute_cigar, gapless
 
 
-# aln, ref, and ref_name are set by set_globals below
+# aln, ref, ref_name, and do_revcomp are set by set_globals below
 def align(seq):
-    score, ref_, seq = aln(ref.value.decode('utf-8'), seq)
+    seqs = (seq, seq.reverse_complement()) if do_revcomp else (seq,)
+    score, ref_, seq = max(
+        (aln(ref.value.decode('utf-8'), seq) for seq in seqs),
+        key=itemgetter(0)
+        )
     seq_ = compute_cigar(ref_, seq, ref_name)
     return score, seq_
 
@@ -31,6 +36,7 @@ def main(
     reference,
     expected_identity,
     do_codon,
+    do_revcomp,
     dna_score_matrix,
     protein_score_matrix,
     discard_handle
@@ -62,6 +68,7 @@ def main(
     # grab the first, make it gapless once and for all
     if reference is None:
         reference = gapless(next(seqs))
+
         def allseqs(seqs):
             yield compute_cigar(reference, reference)
             for seq in seqs:
@@ -91,7 +98,8 @@ def main(
                 initargs=[
                     ('aln', aln),
                     ('ref', reference_),
-                    ('ref_name', reference.name)
+                    ('ref_name', reference.name),
+                    ('do_revcomp', do_revcomp)
                     ]
                 ).lazy(
                     delayed(align)(seq)
@@ -225,6 +233,15 @@ if __name__ == '__main__':
         type=argparse.FileType('w'),
         help='discarded sequences are sent to DISCARD'
         )
+    parser.add_argument(
+        '-R', '--reverse-complement',
+        dest='do_revcomp',
+        action='store_true',
+        help=(
+            "also align the reverse complement of each query sequence, "
+            "returning it if the alignment is superior"
+            )
+        )
 
     args = None
     retcode = -1
@@ -236,6 +253,7 @@ if __name__ == '__main__':
             args.reference,
             args.expected_identity,
             args.do_codon,
+            args.do_revcomp,
             dna_score_matrices[args.dna_score_matrix],
             protein_score_matrices[args.protein_score_matrix],
             args.discard
