@@ -5,8 +5,8 @@ import numpy as np
 
 from scipy.misc import comb, factorial
 from scipy.optimize import fmin_cobyla
-from scipy.stats import rv_discrete
-from scipy.special import beta
+from scipy.stats import rv_continuous, rv_discrete
+from scipy.special import beta, gamma
 
 
 __all__ = ['bbinom', 'pois']
@@ -79,3 +79,11 @@ class pois_gen(rv_discrete):
         return (np.sum(np.arange(len(data)) * data) / np.sum(data),)
 
 pois = pois_gen(name='pois', shapes='lam')
+
+
+# class diri_gen(rv_continuous):
+#
+#     def _pdf(self, x, a):
+#         return gamma(np.sum(a)) / np.prod(gamma(a)) * np.prod(np.power(x, a - 1))
+#
+# diri = diri_gen(name='diri', shapes='a')

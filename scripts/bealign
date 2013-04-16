@@ -2,116 +2,69 @@
 
 from __future__ import division, print_function
 
-from ctypes import c_char
-from multiprocessing import Array
-from operator import itemgetter
-
 from Bio import SeqIO
 
-from BioExt.aligner import Aligner
 from BioExt.io import BamIO
-from BioExt.joblib import Parallel, delayed
 from BioExt.misc import compute_cigar, gapless
-
-
-# aln, ref, ref_name, and do_revcomp are set by set_globals below
-def align(seq):
-    seqs = (seq, seq.reverse_complement()) if do_revcomp else (seq,)
-    score, ref_, seq = max(
-        (aln(ref.value.decode('utf-8'), seq) for seq in seqs),
-        key=itemgetter(0)
-        )
-    seq_ = compute_cigar(ref_, seq, ref_name)
-    return score, seq_
-
-
-def set_globals(*args):
-    for key, value in args:
-        globals()[key] = value
+from BioExt.uds import _align_par
 
 
 def main(
-    input_handle,
-    output_handle,
-    reference,
-    expected_identity,
-    do_codon,
-    do_revcomp,
-    dna_score_matrix,
-    protein_score_matrix,
-    discard_handle
-    ):
-
-    import os
-
-    try:
-        n_jobs = int(os.environ.get('NCPU', -1))
-    except ValueError:
-        n_jobs = -1
-
-    if n_jobs == 0:
-        n_jobs = None
+        input_handle,
+        output_handle,
+        reference,
+        expected_identity,
+        do_codon,
+        reverse_complement,
+        dna_score_matrix,
+        protein_score_matrix,
+        discard_handle):
 
     if do_codon:
         score_matrix = protein_score_matrix
     else:
         score_matrix = dna_score_matrix
 
-    aln = Aligner(
-        score_matrix=score_matrix,
-        expected_identity=expected_identity,
-        do_codon=do_codon
-        )
-
-    seqs = SeqIO.parse(input_handle, 'fasta')
+    records = SeqIO.parse(input_handle, 'fasta')
 
     # grab the first, make it gapless once and for all
     if reference is None:
-        reference = gapless(next(seqs))
+        reference = gapless(next(records))
 
-        def allseqs(seqs):
+        def allseqs(records):
             yield compute_cigar(reference, reference)
-            for seq in seqs:
-                yield seq
+            for record in records:
+                yield record
     else:
-        def allseqs(seqs):
-            for seq in seqs:
-                yield seq
+        def allseqs(records):
+            for record in records:
+                yield record
 
-    reference_ = Array(c_char, str(reference.seq).encode('utf-8'))
+    if discard_handle:
+        def discard(record):
+            SeqIO.write([record], discard_handle, 'fasta')
+    else:
+        discard = None
 
-    def keep(score, seq):
-        if aln.expected(score):
-            return True
-        elif discard_handle:
-            SeqIO.write([seq], discard_handle, 'fasta')
-        return False
+    def output(records):
+        BamIO.write(
+            allseqs(records),
+            output_file,
+            reference
+            )
 
-    BamIO.write(
-        allseqs(
-            seq
-            for score, seq in Parallel(
-                n_jobs=n_jobs,
-                verbose=0,
-                pre_dispatch='3 * n_jobs',  # triple-buffering
-                initializer=set_globals,
-                initargs=[
-                    ('aln', aln),
-                    ('ref', reference_),
-                    ('ref_name', reference.name),
-                    ('do_revcomp', do_revcomp)
-                    ]
-                ).lazy(
-                    delayed(align)(seq)
-                    for seq in seqs
-                    )
-            if keep(score, seq)
-            ),
-        output_handle,
-        reference
+    _align_par(
+        reference,
+        records,
+        score_matrix,
+        do_codon,
+        reverse_complement,
+        expected_identity,
+        discard,
+        output
         )
 
-    BamIO.sort(output_handle.name)
+    BamIO.sort(output_file)
 
     return 0
 
@@ -235,7 +188,6 @@ if __name__ == '__main__':
         )
     parser.add_argument(
         '-R', '--reverse-complement',
-        dest='do_revcomp',
         action='store_true',
         help=(
             "also align the reverse complement of each query sequence, "
@@ -247,13 +199,15 @@ if __name__ == '__main__':
     retcode = -1
     try:
         args = parser.parse_args()
+        output_file = args.output.name
+        args.output.close()
         retcode = main(
             args.input,
-            args.output,
+            output_file,
             args.reference,
             args.expected_identity,
             args.do_codon,
-            args.do_revcomp,
+            args.reverse_complement,
             dna_score_matrices[args.dna_score_matrix],
             protein_score_matrices[args.protein_score_matrix],
             args.discard
@@ -263,14 +217,12 @@ if __name__ == '__main__':
             # close input file handle
             if args.input and args.input != sys.stdin:
                 args.input.close()
-            # close and remove empty output file handles
-            for handle in (args.output, args.discard):
-                if handle and handle != sys.stdout:
-                    handle.close()
-                    try:
-                        if getsize(handle.name) == 0:
-                            remove(handle.name)
-                    except:
-                        pass
+            if args.discard and args.discard != sys.stdout:
+                args.discard.close()
+                try:
+                    if getsize(args.discard.name) == 0:
+                        remove(args.discard.name)
+                except:
+                    pass
 
     sys.exit(retcode)

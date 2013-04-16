@@ -608,7 +608,7 @@ double AlignStrings( char * const r_str
     if ( do_codon && ( r_len % 3 != 0 ) ) {
         *r_res = NULL;
         *q_res = NULL;
-        return -A_LARGE_NUMBER; 
+        return -A_LARGE_NUMBER;
     }
 
     // handle some corner cases,

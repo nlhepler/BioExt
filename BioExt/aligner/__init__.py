@@ -229,8 +229,11 @@ class Aligner:
             raise ValueError('when do_codon = True, len(ref) must be a multiple of 3')
 
         # if do_codon, the query's length needs to be a multiple of 3
-        if self.__do_codon and len(query_) % 3 != 0:
-            query_ += 'N' * (3 - len(query_) % 3)
+#         if self.__do_codon and len(query_) % 3 != 0:
+#             ns = 3 - len(query_) % 3
+#             query_ += 'N' * ns
+#         else:
+#             ns = 0
 
         if len(query) == 0:
             score, ref_aligned, query_aligned = float('-Inf'), ref_, '-' * len(ref_)

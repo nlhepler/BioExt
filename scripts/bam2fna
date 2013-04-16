@@ -2,10 +2,8 @@
 
 import signal
 
-from Bio import AlignIO
-from Bio.Align import MultipleSeqAlignment
+from Bio import SeqIO
 from BioExt.io import BamIO
-from BioExt.misc import gapful
 
 
 def main(bam_file, out_handle):
@@ -15,15 +13,7 @@ def main(bam_file, out_handle):
     except ValueError:
         pass
 
-    seqs = [gapful(record, insertions=False) for record in BamIO.parse(bam_file)]
-
-    length = max(len(seq) for seq in seqs)
-
-    msa = MultipleSeqAlignment(
-        [seq + ('-' * (length - len(seq))) for seq in seqs]
-        )
-
-    AlignIO.write(msa, out_handle, 'fasta')
+    SeqIO.write(BamIO.parse(bam_file), out_handle, 'fasta')
 
     return 0
 
@@ -33,7 +23,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='convert a BAM file to a MSA, removing insertions'
+        description='convert a BAM file to a FASTA file'
         )
 
     parser.add_argument(
@@ -47,7 +37,7 @@ if __name__ == '__main__':
         default=sys.stdout,
         metavar='OUTPUT',
         type=argparse.FileType('w'),
-        help='output FASTA MSA file'
+        help='output FASTA file'
         )
 
     args = None

@@ -29,7 +29,7 @@ __all__ = [
     'translate',
     'compute_cigar',
     'gapless',
-    'strip_insertions'
+    'gapful'
     ]
 
 
@@ -301,7 +301,7 @@ def compute_cigar(reference, record, reference_name=None, new_style=False):
     # inject the annotations and yield
     record.annotations['CIGAR'] = cigar
     record.annotations['edit_distance'] = edit_distance
-    record.annotations['position'] = start + 1  # 1-indexed
+    record.annotations['position'] = start
     record.annotations['length'] = end - start
     record.annotations['reference_name'] = reference_name
 
@@ -332,14 +332,15 @@ def gapless(seq):
         raise ValueError('seq must have type SeqRecord, Seq, or str')
 
 
-def strip_insertions(record):
+def gapful(record, insertions=True):
     regexp = re_compile(r'([0-9]+)([M=XID])')
     p = 0
+    modes = 'M=XI' if insertions else 'M=X'
     cigparts = []
-    seqparts = ['-' * (record.annotations['position'] - 1)]
+    seqparts = ['-' * (record.annotations['position'])]
     for m in regexp.finditer(record.annotations['CIGAR']):
         num, mode = int(m.group(1)), m.group(2)
-        if mode in 'M=X':
+        if mode in modes:
             cigparts.append(m.group(0))
             seqparts.append(str(record.seq[p:(p + num)]))
         elif mode == 'D':

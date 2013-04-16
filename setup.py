@@ -48,6 +48,7 @@ setup(
         'BioExt.misc',
         'BioExt.orflist',
         'BioExt.phylo',
+        'BioExt.quiver',
         'BioExt.references',
         'BioExt.scorematrix',
         'BioExt.stats',
@@ -67,6 +68,7 @@ setup(
         'BioExt.misc': 'BioExt/misc',
         'BioExt.orflist': 'BioExt/orflist',
         'BioExt.phylo': 'BioExt/phylo',
+        'BioExt.quiver': 'BioExt/quiver',
         'BioExt.references': 'BioExt/references',
         'BioExt.scorematrix': 'BioExt/scorematrix',
         'BioExt.stats': 'BioExt/stats',
@@ -79,8 +81,10 @@ setup(
             ] + _installrefdirs
         },
     scripts=[
+        'scripts/bam2fna',
+        'scripts/bam2msa',
         'scripts/bealign',
-        'scripts/bam2msa'
+        'scripts/consensus'
         ],
     ext_modules=ext_modules,
     requires=[
