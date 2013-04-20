@@ -21,8 +21,8 @@ def parse(path, index=True):
         yield record
 
 
-def write(records, path, reference=None, new_style=False):
-    return _SamBamIO._write('wb', records, path, reference, new_style)
+def write(records, path, reference=None, new_style=False, header=None):
+    return _SamBamIO._write('wb', records, path, reference, new_style, header)
 
 
 def sort(path):

@@ -1,6 +1,8 @@
 
 from __future__ import division, print_function
 
+import sys
+
 from collections import defaultdict
 
 import numpy as np
@@ -107,14 +109,13 @@ class Aligner:
             expected_identity
             )
 
-        letters = letters.encode('utf8')
         char_map = np.zeros((256,), dtype=int)
         # this ensures that no matter context,
         # computing the codon index (16 * i + 4 * j + k) will always be 0
         # for any i, j, k in [0, 3]
         char_map[:] = -256
         for i, l in enumerate(letters):
-            char_map[l] = i
+            char_map[ord(l)] = i
 
         if do_codon:
             codon3x5, codon3x4, codon3x2, codon3x1 = _compute_codon_matrices(score_matrix_)
@@ -239,8 +240,8 @@ class Aligner:
             score, ref_aligned, query_aligned = float('-Inf'), ref_, '-' * len(ref_)
         else:
             score, ref_aligned, query_aligned = _align(
-                ref_,
-                query_,
+                ref_.encode('utf-8'),
+                query_.encode('utf-8'),
                 self.__nchars,
                 self.__char_map,
                 self.__score_matrix_,
@@ -258,6 +259,10 @@ class Aligner:
                 self.__codon3x2,
                 self.__codon3x1
                 )
+
+        if sys.version_info >= (3, 0):
+            ref_aligned = ref_aligned.decode('utf-8')
+            query_aligned = query_aligned.decode('utf-8')
 
         if isinstance(ref, SeqRecord):
             ref_aligned_ = SeqRecord(

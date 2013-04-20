@@ -2,7 +2,6 @@
 from __future__ import division, print_function
 
 from hashlib import md5
-from os.path import exists
 from re import compile as re_compile
 
 from Bio.Align import MultipleSeqAlignment
@@ -149,22 +148,25 @@ def _parse(mode, path, index=True):
             samfile.close()
 
 
-def _write(mode, records, path, reference, new_style):
+def _write(mode, records, path, reference, new_style, header):
     try:
         count = 0
-        header = {
-            'HD': {'VN': '1.4', 'SO': 'unknown'},
-            }
-        if reference is not None:
-            hasher = md5()
-            hasher.update(
-                _VALID_CHARS.sub('', str(reference.seq).upper()).encode('ascii')
-                )
-            header['SQ'] = [{
-                'SN': reference.name,
-                'LN': len(reference),
-                'M5': hasher.hexdigest()
-                }]
+
+        if header is None:
+            header = {
+                'HD': {'VN': '1.4', 'SO': 'unknown'},
+                }
+            if reference is not None:
+                hasher = md5()
+                hasher.update(
+                    _VALID_CHARS.sub('', str(reference.seq).upper()).encode('ascii')
+                    )
+                header['SQ'] = [{
+                    'SN': reference.name,
+                    'LN': len(reference),
+                    'M5': hasher.hexdigest()
+                    }]
+
         samfile = pysam.Samfile(path, mode, header=header)
 
         if reference is not None and isinstance(records, MultipleSeqAlignment):

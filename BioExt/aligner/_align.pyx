@@ -119,8 +119,8 @@ def _compute_codon_matrices(dtype_t[:, :] cost_matrix):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def _align(
-        unicode u_ref,
-        unicode u_query,
+        bytes b_ref,
+        bytes b_query,
         itype_t char_count,
         np.ndarray[itype_t] char_map,
         np.ndarray[dtype_t, ndim=2, mode='c'] cost_matrix,
@@ -139,18 +139,16 @@ def _align(
         np.ndarray[dtype_t, ndim=2, mode='c'] codon3x1):
 
     # cast from unicode to char *
-    cdef bytes b_ref = u_ref.encode('utf8')
-    cdef bytes b_query = u_query.encode('utf8')
     cdef char * ref = b_ref
     cdef char * query = b_query
 
     cdef char * ref_aligned = NULL
     cdef char * query_aligned = NULL
-    cdef unicode u_ref_aligned
-    cdef unicode u_query_aligned
+    cdef bytes b_ref_aligned
+    cdef bytes b_query_aligned
     cdef dtype_t score
 
-    if do_codon and len(u_ref) % 3 != 0:
+    if do_codon and len(b_ref) % 3 != 0:
         raise ValueError('when do_codon = True, len(ref) must be a multiple of 3')
 
     try:
@@ -177,11 +175,11 @@ def _align(
             raise MemoryError('memory allocation error in AlignStrings(...)')
 
         # cast char * back to unicode
-        u_ref_aligned = ref_aligned.decode('utf8')
-        u_query_aligned = query_aligned.decode('utf8')
+        b_ref_aligned = ref_aligned
+        b_query_aligned = query_aligned
 
     finally:
         free(ref_aligned)
         free(query_aligned)
 
-    return score, u_ref_aligned, u_query_aligned
+    return score, b_ref_aligned, b_query_aligned

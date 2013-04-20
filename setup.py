@@ -23,6 +23,14 @@ ext_modules = [
         include_dirs=np_inc,
         libraries=['m'],
         extra_compile_args=['-O3']
+        ),
+    Extension(
+        'BioExt.merger._merge',
+        sources=[
+            os.path.join('BioExt', 'merger', '_merge.c'),
+            os.path.join('BioExt', 'merger', 'merge.cpp')
+            ],
+        extra_compile_args=['-O1']
         )
     ]
 
@@ -45,7 +53,10 @@ setup(
         'BioExt.io.LazyAlignIO',
         'BioExt.io.SamIO',
         'BioExt.joblib',
+        'BioExt.joblib.test',
+        'BioExt.merger',
         'BioExt.misc',
+        'BioExt.ndarray',
         'BioExt.orflist',
         'BioExt.phylo',
         'BioExt.quiver',
@@ -65,7 +76,10 @@ setup(
         'BioExt.io.LazyAlignIO': 'BioExt/io/LazyAlignIO',
         'BioExt.io.SamIO': 'BioExt/io/SamIO',
         'BioExt.joblib': 'BioExt/joblib',
+        'BioExt.joblib.test': 'BioExt/joblib/test',
+        'BioExt.merger': 'BioExt/merger',
         'BioExt.misc': 'BioExt/misc',
+        'BioExt.ndarray': 'BioExt/ndarray',
         'BioExt.orflist': 'BioExt/orflist',
         'BioExt.phylo': 'BioExt/phylo',
         'BioExt.quiver': 'BioExt/quiver',

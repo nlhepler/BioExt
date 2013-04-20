@@ -18,7 +18,8 @@ def main(
         reverse_complement,
         dna_score_matrix,
         protein_score_matrix,
-        discard_handle):
+        discard_handle,
+        do_sort):
 
     if do_codon:
         score_matrix = protein_score_matrix
@@ -64,7 +65,8 @@ def main(
         output
         )
 
-    BamIO.sort(output_file)
+    if do_sort:
+        BamIO.sort(output_file)
 
     return 0
 
@@ -194,6 +196,11 @@ if __name__ == '__main__':
             "returning it if the alignment is superior"
             )
         )
+    parser.add_argument(
+        '-s', '--sort',
+        action='store_true',
+        help='sort resulting BAM file after alignment'
+        )
 
     args = None
     retcode = -1
@@ -210,7 +217,8 @@ if __name__ == '__main__':
             args.reverse_complement,
             dna_score_matrices[args.dna_score_matrix],
             protein_score_matrices[args.protein_score_matrix],
-            args.discard
+            args.discard,
+            args.sort
         )
     finally:
         if args is not None:

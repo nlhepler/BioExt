@@ -15,5 +15,5 @@ def parse(path):
         yield record
 
 
-def write(records, path, reference=None, new_style=False):
-    return _SamBamIO._write('w', path, reference, new_style)
+def write(records, path, reference=None, new_style=False, header=None):
+    return _SamBamIO._write('w', path, reference, new_style, header)

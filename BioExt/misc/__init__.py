@@ -29,7 +29,8 @@ __all__ = [
     'translate',
     'compute_cigar',
     'gapless',
-    'gapful'
+    'gapful',
+    'labelstream'
     ]
 
 
