@@ -41,7 +41,7 @@ cdef extern from "merge.h":
         int * nclusters
         ) nogil
 
-    cdef void aligned_destroy(aligned_t read) nogil
+    cdef void aligned_destroy(aligned_t * read) nogil
 
 
 cdef aligned_t labelstream(record):
@@ -136,14 +136,14 @@ cdef aligned_t labelstream_(read):
     return read_
 
 
-cdef _to_seqrecord(int idx, aligned_t cluster):
+cdef _to_seqrecord(int idx, aligned_t * cluster):
     if not cluster.len:
         raise ValueError(
-            'labelstream cannot should not begin with a gap'
+            'cluster has length of 0, which is very incorrect'
             )
 
     next_col = cluster.data[0].col + 1
-    seq = [bits2nuc(cluster.data[0].nuc)]
+    seq = [chr(bits2nuc(cluster.data[0].nuc))]
     cigar = []
     mode = 'I' if cluster.data[0].ins else 'M'
     num = 1
@@ -159,7 +159,7 @@ cdef _to_seqrecord(int idx, aligned_t cluster):
                 mode = 'D'
         # keep track of the next column, seq, and mode_
         next_col = cluster.data[i].col + 1
-        seq.append(bits2nuc(cluster.data[i].nuc))
+        seq.append(chr(bits2nuc(cluster.data[i].nuc)))
         mode_ = 'I' if cluster.data[i].ins else 'M'
 
         if mode_ == mode:
@@ -186,9 +186,10 @@ cdef _merge(bam, reads, int min_overlap, int min_reads, int tol_gaps, int tol_am
     cdef int nreads = 512
     cdef aligned_t * reads_ = <aligned_t *>malloc(nreads * sizeof(aligned_t))
     cdef opts_t * opts = <opts_t *>malloc(sizeof(opts_t))
-    cdef aligned_t * clusters
+    cdef aligned_t * clusters = NULL
     cdef int nclusters
     cdef int idx = 0
+    cdef int i = 0
     opts.min_overlap = min_overlap
     opts.min_reads = min_reads
     opts.tol_gaps = tol_gaps
@@ -213,7 +214,7 @@ cdef _merge(bam, reads, int min_overlap, int min_reads, int tol_gaps, int tol_am
 
             idx += 1
 
-            if idx > nreads:
+            if idx >= nreads:
                 nreads *= 2
                 reads_ = <aligned_t *>realloc(reads_, nreads * sizeof(aligned_t))
 
@@ -230,18 +231,19 @@ cdef _merge(bam, reads, int min_overlap, int min_reads, int tol_gaps, int tol_am
         clusters_ = []
 
         for i in range(nclusters):
-            clusters_.append(_to_seqrecord(i + 1, clusters[i]))
+            clusters_.append(_to_seqrecord(i + 1, &clusters[i]))
 
     finally:
         free(opts)
 
         for i in range(nreads):
-            aligned_destroy(reads_[i])
+            aligned_destroy(&reads_[i])
 
         free(reads_)
 
         for i in range(nclusters):
-            aligned_destroy(clusters[i])
+            if clusters[i].ncontrib > 1:
+                aligned_destroy(&clusters[i])
 
         free(clusters)
 

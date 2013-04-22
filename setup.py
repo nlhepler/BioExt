@@ -30,7 +30,7 @@ ext_modules = [
             os.path.join('BioExt', 'merger', '_merge.c'),
             os.path.join('BioExt', 'merger', 'merge.cpp')
             ],
-        extra_compile_args=['-O1']
+        extra_compile_args=['-O3']
         )
     ]
 

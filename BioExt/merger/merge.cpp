@@ -1,4 +1,5 @@
 
+#include <cstdlib>
 #include <algorithm>
 #include <iostream>
 #include <vector>
@@ -63,7 +64,6 @@ char bits2nuc( const char bits )
     }
 }
 
-inline
 cmp_t pos_cmp( const triple_t & x, const triple_t & y )
 {
     // test the column, then the insertion, then equal
@@ -97,6 +97,18 @@ void cerr_triple( const triple_t & x, bool end=true )
 }
 
 
+#ifdef DEBUG
+#define ABORT( msg ) { \
+    cerr << msg << ": "; \
+    cerr_triple( xs.data[ xidx ], false ); \
+    cerr_triple( ys.data[ yidx ] ); \
+    return FAILURE; \
+}
+#else
+#define ABORT( msg ) { return FAILURE; }
+#endif
+
+
 res_t merge_two(
     const aligned_t & xs,
     const aligned_t & ys,
@@ -112,12 +124,12 @@ res_t merge_two(
     int cmp = 0;
 
     if ( !xs.len || !ys.len )
-        return FAILURE;
+        ABORT( "insufficient length" )
 
     // if there is absolutely no hope to reach min_overlap, skip
-    if ( xs.rpos < ys.lpos + opts.min_overlap &&
+    if ( false && xs.rpos < ys.lpos + opts.min_overlap &&
             ys.rpos < xs.lpos + opts.min_overlap )
-        return FAILURE;
+        ABORT( "no opportunity for sufficient overlap" )
 
     cmp = pos_cmp( xs.data[ xidx ], ys.data[ yidx ] );
 
@@ -126,38 +138,40 @@ res_t merge_two(
 
     // disregard overhangs
     if ( cmp == LT ) {
-        for ( xidx = 1; cmp == LT && xidx < xs.len; ++xidx )
+        for ( ; cmp == LT && xidx + 1 < xs.len; ) {
+            ++xidx;
             cmp = pos_cmp( xs.data[ xidx ], ys.data[ yidx ] );
+        }
         // if its not a match, it's a gap, then backup one in xs
-        if ( cmp != EQ )
-            --xidx;
+        if ( cmp == GT && !opts.tol_gaps )
+            ABORT( "no gaps in ys" )
         // mlen is now the # of xs already visited
-        mlen = xidx + 1;
+        mlen += xidx;
     }
     else if ( cmp == GT ) {
-        for ( yidx = 1; cmp == GT && yidx < ys.len; ++yidx )
+        for ( ; cmp == GT && yidx + 1 < ys.len; ) {
+            ++yidx;
             cmp = pos_cmp( xs.data[ xidx ], ys.data[ yidx ] );
+        }
         // if its not a match, it's a gap, then backup one in ys
-        if ( cmp != EQ )
-            --yidx;
+        if ( cmp == GT && !opts.tol_gaps )
+            ABORT( "no gaps in xs" )
         // mlen is now the # of ys already visited
-        mlen = yidx + 1;
+        mlen += yidx;
     }
 
     // compute the amount of overlap
-    for ( ; xidx < xs.len && yidx < ys.len; ) {
+    for ( ; xidx < xs.len && yidx < ys.len; ++mlen ) {
         cmp = pos_cmp( xs.data[ xidx ], ys.data[ yidx ] );
         if ( cmp == LT ) {
             if ( !opts.tol_gaps )
-                return FAILURE;
+                ABORT( "no gaps in xs" )
             ++xidx;
-            ++mlen;
         }
         else if ( cmp == GT ) {
             if ( !opts.tol_gaps )
-                return FAILURE;
+                ABORT( "no gaps in ys" )
             ++yidx;
-            ++mlen;
         }
         // if the nucleotides match, move ahead
         else if ( xs.data[ xidx ].nuc == ys.data[ yidx ].nuc ||
@@ -165,15 +179,14 @@ res_t merge_two(
                 ++overlap;
                 ++xidx;
                 ++yidx;
-                ++mlen;
         }
         // nucleotides do not match, abort early
         else
-            return FAILURE;
+            ABORT( "mismatch" )
     }
 
     if ( overlap < opts.min_overlap )
-        return FAILURE;
+        ABORT( "insufficient overlap" )
 
     // get the remainder of either xs or ys, whichever remains
     if ( xidx < xs.len )
@@ -182,20 +195,15 @@ res_t merge_two(
         mlen += ys.len - yidx;
 
     merged.len = mlen;
-    merged.data = new triple_t[ merged.len ];
+    merged.data = reinterpret_cast< triple_t * >( malloc( merged.len * sizeof( triple_t ) ) );
     merged.lpos = MIN( xs.lpos, ys.lpos );
     merged.rpos = MAX( xs.rpos, ys.rpos );
     merged.ncontrib = xs.ncontrib + ys.ncontrib;
 
     if ( !merged.data )
-        return FAILURE;
+        ABORT( "memory allocation error" )
 
-    xidx = 0;
-    yidx = 0;
-    
-    cerr << "leading and matching part" << endl;
-
-    for ( ; xidx < xs.len && yidx < ys.len; ) {
+    for ( xidx = 0, yidx = 0; xidx < xs.len && yidx < ys.len; ) {
         cmp = pos_cmp( xs.data[ xidx ], ys.data[ yidx ] );
         if ( cmp == LT )
             merged.data[ midx++ ] = xs.data[ xidx++ ];
@@ -210,8 +218,6 @@ res_t merge_two(
         }
     }
 
-    cerr << "trailing part" << endl;
-
     if ( xidx < xs.len )
         for ( ; xidx < xs.len; ++xidx )
             merged.data[ midx++ ] = xs.data[ xidx ];
@@ -219,8 +225,12 @@ res_t merge_two(
         for ( ; yidx < ys.len; ++yidx )
             merged.data[ midx++ ] = ys.data[ yidx ];
 
-    if ( midx != mlen )
+#ifndef DEBUG
+    if ( midx < mlen )
         cerr << "error: failed to fill 'merged' data" << endl;
+    else if ( midx > mlen )
+        cerr << "error: overfilled 'merged' data" << endl;
+#endif
 
     return SUCCESS;
 }
@@ -230,21 +240,20 @@ int merge_clusters(
     const opts_t & opts
     )
 {
-    int i, j, nclusters;
+    size_t i, j;
+    int nclusters;
     aligned_t merged;
-    res_t res = FAILURE; 
-
-    sort( clusters.begin(), clusters.end(), ncontrib_cmp );
+    res_t res = FAILURE;
 
 begin:
-    nclusters = 0;
+    sort( clusters.begin(), clusters.end(), ncontrib_cmp );
 
-    for ( i = 0; i < clusters.size(); ++i ) {
+    for ( i = 0, nclusters = 0; i < clusters.size(); ++i ) {
         for ( j = i + 1; j < clusters.size(); ++j ) {
             res = merge_two( clusters[ i ], clusters[ j ], opts, merged );
             if ( res == SUCCESS ) {
-                aligned_destroy( clusters[ i ] );
-                aligned_destroy( clusters[ j ] );
+                aligned_destroy( &clusters[ i ] );
+                aligned_destroy( &clusters[ j ] );
                 // replace i and remove j
                 clusters[ i ] = merged;
                 clusters.erase( clusters.begin() + j );
@@ -252,9 +261,9 @@ begin:
             }
             else if ( res == ERROR )
                 return -1;
+        }
         if ( clusters[ i ].ncontrib >= opts.min_reads )
             ++nclusters;
-        }
     }
 
     return nclusters;
@@ -267,7 +276,7 @@ aligned_t * merge__(
     int * nclusters
     )
 {
-    int i, j, merge_size = MERGE_SIZE;
+    size_t i, j, merge_size = MERGE_SIZE;
     vector< aligned_t > clusters;
     aligned_t * clusters_;
     aligned_t merged;
@@ -275,13 +284,13 @@ aligned_t * merge__(
 
     clusters.push_back( reads[ 0 ] );
 
-    for ( i = 1; i < nreads; ) {
+    for ( i = 1; i < size_t(nreads); ++i ) {
         for ( j = 0; j < clusters.size(); ++j ) {
             res = merge_two( reads[ i ], clusters[ j ], *opts, merged );
             if ( res == SUCCESS ) {
                 // destroy our clusters
                 if ( clusters[ j ].ncontrib > 1 )
-                    aligned_destroy( clusters[ j ] );
+                    aligned_destroy( &clusters[ j ] );
                 clusters[ j ] = merged;
                 if ( clusters.size() > merge_size ) {
                     if ( merge_clusters( clusters, *opts ) < 0 )
@@ -294,16 +303,16 @@ aligned_t * merge__(
                 goto error;
         }
         clusters.push_back( reads[ i ] );
-next:
-    ++i;
+next:;
+    // sort( clusters.begin(), clusters.end(), ncontrib_cmp );
     }
 
     *nclusters = merge_clusters( clusters, *opts );
-    
+
     if ( *nclusters < 0 )
         goto error;
-    
-    clusters_ = new aligned_t[ *nclusters ];
+
+    clusters_ = reinterpret_cast< aligned_t * >( malloc( *nclusters * sizeof( aligned_t ) ) );
 
     if ( !clusters_ )
         goto error;
@@ -313,22 +322,24 @@ next:
             clusters_[ j++ ] = clusters[ i ];
         // only free clusters we allocated
         else if ( clusters[ i ].ncontrib > 1 )
-            aligned_destroy( clusters[ i ] );
+            aligned_destroy( &clusters[ i ] );
     }
-    
-    goto end;
+
+    return clusters_;
 
 error:
     *nclusters = 0;
-    return NULL;
 
-end:
-    return clusters_;
+    for ( i = 0; i < clusters.size(); ++i )
+        if ( clusters[ i ].ncontrib > 1 )
+            aligned_destroy( &clusters[ i ] );
+
+    return NULL;
 }
 
-void aligned_destroy( aligned_t read )
+void aligned_destroy( aligned_t * const read )
 {
-    delete[] read.data;
-    read.data = NULL;
-    read.len = 0;
+    free( read->data );
+    read->data = NULL;
+    read->len = 0;
 }

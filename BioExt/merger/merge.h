@@ -35,7 +35,7 @@ aligned_t * merge__(
     int * nclusters
     );
 
-void aligned_destroy( aligned_t read );
+void aligned_destroy( aligned_t * const read );
 
 #ifdef __cplusplus
 }
