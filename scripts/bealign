@@ -19,7 +19,8 @@ def main(
         dna_score_matrix,
         protein_score_matrix,
         discard_handle,
-        do_sort):
+        do_sort,
+        quiet):
 
     if do_codon:
         score_matrix = protein_score_matrix
@@ -62,7 +63,8 @@ def main(
         reverse_complement,
         expected_identity,
         discard,
-        output
+        output,
+        quiet
         )
 
     if do_sort:
@@ -201,6 +203,11 @@ if __name__ == '__main__':
         action='store_true',
         help='sort resulting BAM file after alignment'
         )
+    parser.add_argument(
+        '-q', '--quiet',
+        action='store_true',
+        help='do not report the number of sequences dispatched'
+        )
 
     args = None
     retcode = -1
@@ -218,7 +225,8 @@ if __name__ == '__main__':
             dna_score_matrices[args.dna_score_matrix],
             protein_score_matrices[args.protein_score_matrix],
             args.discard,
-            args.sort
+            args.sort,
+            args.quiet
         )
     finally:
         if args is not None:

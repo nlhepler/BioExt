@@ -143,7 +143,7 @@ cdef _to_seqrecord(int idx, aligned_t * cluster):
             )
 
     next_col = cluster.data[0].col + 1
-    seq = [chr(bits2nuc(cluster.data[0].nuc))]
+    seq = [<Py_UNICODE>bits2nuc(cluster.data[0].nuc)]
     cigar = []
     mode = 'I' if cluster.data[0].ins else 'M'
     num = 1
@@ -159,7 +159,7 @@ cdef _to_seqrecord(int idx, aligned_t * cluster):
                 mode = 'D'
         # keep track of the next column, seq, and mode_
         next_col = cluster.data[i].col + 1
-        seq.append(chr(bits2nuc(cluster.data[i].nuc)))
+        seq.append(<Py_UNICODE>bits2nuc(cluster.data[i].nuc))
         mode_ = 'I' if cluster.data[i].ins else 'M'
 
         if mode_ == mode:

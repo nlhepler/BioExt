@@ -6,6 +6,7 @@ import os
 from ctypes import c_char
 from multiprocessing import Array
 from operator import itemgetter
+from sys import stderr
 
 from Bio.Align import MultipleSeqAlignment
 
@@ -57,15 +58,16 @@ def _set_globals(*args):
 
 
 def _align_par(
-    reference,
-    records,
-    score_matrix,
-    do_codon,
-    reverse_complement,
-    expected_identity,
-    discard,
-    output
-    ):
+        reference,
+        records,
+        score_matrix,
+        do_codon,
+        reverse_complement,
+        expected_identity,
+        discard,
+        output,
+        quiet=True
+        ):
 
     try:
         n_jobs = int(os.environ.get('NCPU', -1))
@@ -101,7 +103,15 @@ def _align_par(
             discard(record)
         return False
 
-    return output(
+    if quiet:
+        def delayed_(i, fn):
+            return delayed(fn)
+    else:
+        def delayed_(i, fn):
+            print('\rdispatched: {0:9d} reads'.format(i), end='', file=stderr)
+            return delayed(fn)
+
+    rv = output(
         record
         for score, record in Parallel(
             n_jobs=n_jobs,
@@ -115,23 +125,28 @@ def _align_par(
                 ('do_revcomp', reverse_complement)
                 ]
             ).lazy(
-                delayed(_align)(record)
-                for record in records
+                delayed_(i, _align)(record)
+                for i, record in enumerate(records)
                 )
         if keep(score, record)
         )
 
+    if not quiet:
+        print('', file=stderr)
+
+    return rv
+
 
 def align_to_refseq(
-    reference,
-    records,
-    score_matrix=None,
-    do_codon=True,
-    reverse_complement=True,
-    expected_identity=None,
-    keep_insertions=False,
-    **kwargs
-    ):
+        reference,
+        records,
+        score_matrix=None,
+        do_codon=True,
+        reverse_complement=True,
+        expected_identity=None,
+        keep_insertions=False,
+        **kwargs
+        ):
 
     if keep_insertions:
         raise ValueError('keeping insertions is unsupported at this time')
