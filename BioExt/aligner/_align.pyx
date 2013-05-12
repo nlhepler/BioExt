@@ -4,8 +4,9 @@ from __future__ import division, print_function
 import numpy as np
 cimport numpy as np
 cimport cython
-from libc.stdlib cimport free
 
+from libc.math cimport exp, log
+from libc.stdlib cimport free
 
 dtype = np.float64
 itype = np.int
@@ -51,10 +52,11 @@ def choose(itype_t n, itype_t k):
     cdef itype_t i
     cdef dtype_t r
 
-    r = 1.0
-    for i in range(1, k):
-        r *= (n - (k - i)) / i
-    return r
+    r = 0.0
+    for i in range(1, k + 1):
+        r += log(n - k + i) - log(i)
+    return exp(r)
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -68,10 +70,11 @@ def _compute_codon_matrices(dtype_t[:, :] cost_matrix):
 
     cdef dtype_t max100, max010, max001, max110, max101, max011, score
 
+    # these should be taken care of in alignment.c
     cdef dtype_t penalty3x5, penalty3x4, penalty3x2, penalty3x1
-    penalty3x4 = 1.0
+    penalty3x4 = 0.0  # 1.0
     penalty3x5 = 2 * penalty3x4
-    penalty3x2 = 1.0
+    penalty3x2 = 0.0  # 1.0
     penalty3x1 = 2 * penalty3x2
 
     codon3x5 = np.zeros((64, 10 * 64), dtype=dtype) # 64 codons, 10 possible placements
@@ -107,7 +110,7 @@ def _compute_codon_matrices(dtype_t[:, :] cost_matrix):
                 # fill codon3x2 partial scoring matrix
                 codon3x2[cdn1, 12 * i + 3 * j + 0] = max110 - penalty3x2
                 codon3x2[cdn1, 12 * i + 3 * j + 1] = max101 - penalty3x2
-                codon3x2[cdn1, 12 * i + j * j + 2] = max011 - penalty3x2
+                codon3x2[cdn1, 12 * i + 3 * j + 2] = max011 - penalty3x2
             # fill codon3x1 partial scoring matrix
             codon3x1[cdn1, 3 * i + 0] = max100 - penalty3x1
             codon3x1[cdn1, 3 * i + 1] = max010 - penalty3x1

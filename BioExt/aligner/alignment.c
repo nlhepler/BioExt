@@ -70,6 +70,8 @@
 //____________________________________________________________________________________
 
 static long CodonAlignStringsStep( double * const score_matrix
+                                 , double * const insertion_matrix
+                                 , double * const deletion_matrix
                                  , long * const reference
                                  , long * const query
                                  , const long r
@@ -81,14 +83,12 @@ static long CodonAlignStringsStep( double * const score_matrix
                                  , const double open_deletion
                                  , const double extend_insertion
                                  , const double extend_deletion
-                                 , double * const cost_matrix
+                                 , const double * const cost_matrix
                                  , const long cost_stride
-                                 , double * const insertion_matrix
-                                 , double * const deletion_matrix
-                                 , double * const codon3x5
-                                 , double * const codon3x4
-                                 , double * const codon3x2
-                                 , double * const codon3x1
+                                 , const double * const codon3x5
+                                 , const double * const codon3x4
+                                 , const double * const codon3x2
+                                 , const double * const codon3x1
                                  )
 {
     /**
@@ -557,10 +557,10 @@ static inline void MatchScore( char * r_str
                              , char * q_str
                              , const long r
                              , const long q
-                             , long * char_map
-                             , double * cost_matrix
+                             , const long * const char_map
+                             , const double * const cost_matrix
                              , const long cost_stride
-                             , double * score
+                             , double * const score
                              )
 {
     const long r_char = char_map[ (int) r_str[ r - 1 ] ];
@@ -579,22 +579,22 @@ double AlignStrings( char * const r_str
                    , char ** r_res
                    , char ** q_res
                    , const long char_count
-                   , long * const char_map
-                   , double * const cost_matrix
+                   , const long * const char_map
+                   , const double * const cost_matrix
                    , const long cost_stride
                    , const char gap
-                   , double open_insertion
-                   , double extend_insertion
-                   , double open_deletion
-                   , double extend_deletion
-                   , double miscall_cost
+                   , const double open_insertion
+                   , const double extend_insertion
+                   , const double open_deletion
+                   , const double extend_deletion
+                   , const double miscall_cost
                    , const long do_local
                    , const long do_affine
                    , const long do_codon
-                   , double * const codon3x5
-                   , double * const codon3x4
-                   , double * const codon3x2
-                   , double * const codon3x1
+                   , const double * const codon3x5
+                   , const double * const codon3x4
+                   , const double * const codon3x2
+                   , const double * const codon3x1
                    )
 {
     const unsigned long r_len = strlen( r_str ),
@@ -812,6 +812,8 @@ double AlignStrings( char * const r_str
                 for ( i = 1; i < score_rows; ++i )
                     for ( j = 1; j < score_cols; ++j )
                         CodonAlignStringsStep( score_matrix
+                                             , insertion_matrix
+                                             , deletion_matrix
                                              , r_enc
                                              , q_enc
                                              , i
@@ -825,8 +827,6 @@ double AlignStrings( char * const r_str
                                              , extend_deletion
                                              , cost_matrix
                                              , cost_stride
-                                             , insertion_matrix
-                                             , deletion_matrix
                                              , codon3x5
                                              , codon3x4
                                              , codon3x2
@@ -943,6 +943,8 @@ double AlignStrings( char * const r_str
                     // perform a step
                     const long code = CodonAlignStringsStep(
                                         score_matrix
+                                      , insertion_matrix
+                                      , deletion_matrix
                                       , r_enc
                                       , q_enc
                                       // divide by 3 to index into codon space
@@ -957,8 +959,6 @@ double AlignStrings( char * const r_str
                                       , extend_deletion
                                       , cost_matrix
                                       , cost_stride
-                                      , insertion_matrix
-                                      , deletion_matrix
                                       , codon3x5
                                       , codon3x4
                                       , codon3x2
