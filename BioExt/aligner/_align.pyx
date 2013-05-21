@@ -63,24 +63,22 @@ def choose(itype_t n, itype_t k):
 def _compute_codon_matrices(dtype_t[:, :] cost_matrix):
 
     cdef itype_t cdn1, cdn2, i, j, k, l
-    cdef np.ndarray[dtype_t, ndim=2] codon3x5
-    cdef np.ndarray[dtype_t, ndim=2] codon3x4
-    cdef np.ndarray[dtype_t, ndim=2] codon3x2
-    cdef np.ndarray[dtype_t, ndim=2] codon3x1
+    cdef np.ndarray[dtype_t, ndim=2] codon3x5, codon3x4, codon3x2, codon3x1
 
     cdef dtype_t max100, max010, max001, max110, max101, max011, score
 
-    # these should be taken care of in alignment.c
     cdef dtype_t penalty3x5, penalty3x4, penalty3x2, penalty3x1
+
+    # these should be taken care of in alignment.c
     penalty3x4 = 0.0  # 1.0
     penalty3x5 = 2 * penalty3x4
     penalty3x2 = 0.0  # 1.0
     penalty3x1 = 2 * penalty3x2
 
-    codon3x5 = np.zeros((64, 10 * 64), dtype=dtype) # 64 codons, 10 possible placements
-    codon3x4 = np.zeros((64, 4 * 64), dtype=dtype)  # 64 codons, 4 possible placements
-    codon3x2 = np.zeros((64, 16 * 3),  dtype=dtype) # 16 dinucs, 3 possible placements
-    codon3x1 = np.zeros((64, 4 * 3),  dtype=dtype)  # 4 nucs, 3 possible placements
+    codon3x5 = np.zeros((64, 10 * 64), dtype=dtype)  # 64 codons, 10 possible placements
+    codon3x4 = np.zeros((64, 4 * 64),  dtype=dtype)  # 64 codons, 4 possible placements
+    codon3x2 = np.zeros((64, 16 * 3),  dtype=dtype)  # 16 dinucs, 3 possible placements
+    codon3x1 = np.zeros((64, 4 * 3),   dtype=dtype)  # 4 nucs, 3 possible placements
 
     for cdn1 in range(64):
         for i in range(4):
@@ -99,11 +97,11 @@ def _compute_codon_matrices(dtype_t[:, :] cost_matrix):
                         codon3x5[cdn1, 10 * cdn2 + l] = score - penalty3x5
                     for l in range(4):
                         codon3x4[cdn1, 4 * cdn2 + l] = score - penalty3x4
-                    # codon3x1 scores, 1 is the ith position
+                    # codon3x1 scores, 1 is the ith position, j/k over "wobble"
                     max100 = max(max100, cost_matrix[cdn1, 16 * i + 4 * j + k])
                     max010 = max(max010, cost_matrix[cdn1, 16 * j + 4 * i + k])
                     max001 = max(max001, cost_matrix[cdn1, 16 * j + 4 * k + i])
-                    # codon3x2 score, 1s are in the ith and jth positions
+                    # codon3x2 score, 1s are in the ith and jth positions, k over "wobble"
                     max110 = max(max110, cost_matrix[cdn1, 16 * i + 4 * j + k])
                     max101 = max(max101, cost_matrix[cdn1, 16 * i + 4 * k + j])
                     max011 = max(max011, cost_matrix[cdn1, 16 * k + 4 * i + j])

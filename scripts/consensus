@@ -20,7 +20,7 @@ import ConsensusCore as cc
 
 
 # global alignment seems to work best ... I don't know why
-LOCAL_ALIGNMENT = False
+LOCAL_ALIGNMENT = True # False
 QV_NITER = 20
 realph = re_compile(r'[^ACGT]')
 

@@ -31,6 +31,14 @@ ext_modules = [
             os.path.join('BioExt', 'merger', 'merge.cpp')
             ],
         extra_compile_args=['-O3']
+        ),
+    Extension(
+        'BioExt.rateclass._rateclass',
+        sources=[
+            os.path.join('BioExt', 'rateclass', '_rateclass.cpp'),
+            os.path.join('BioExt', 'rateclass', 'rateclass.cpp')
+            ],
+        extra_compile_args=['-O3']
         )
     ]
 
@@ -60,6 +68,7 @@ setup(
         'BioExt.orflist',
         'BioExt.phylo',
         'BioExt.quiver',
+        'BioExt.rateclass',
         'BioExt.references',
         'BioExt.scorematrix',
         'BioExt.stats',
@@ -83,6 +92,7 @@ setup(
         'BioExt.orflist': 'BioExt/orflist',
         'BioExt.phylo': 'BioExt/phylo',
         'BioExt.quiver': 'BioExt/quiver',
+        'BioExt.rateclass': 'BioExt/rateclass',
         'BioExt.references': 'BioExt/references',
         'BioExt.scorematrix': 'BioExt/scorematrix',
         'BioExt.stats': 'BioExt/stats',
@@ -97,8 +107,10 @@ setup(
     scripts=[
         'scripts/bam2fna',
         'scripts/bam2msa',
+        'scripts/bamclip',
         'scripts/bealign',
-        'scripts/consensus'
+        # 'scripts/consensus',
+        # 'scripts/variants'
         ],
     ext_modules=ext_modules,
     requires=[

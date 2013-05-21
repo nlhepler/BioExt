@@ -1142,7 +1142,7 @@ double AlignStrings( char * const r_str
                         // insertion!
                     case 1:
                         (*r_res)[ k ] = gap;
-                        (*q_res)[ k ] = q_str[ j++ ];
+                        (*q_res)[ k ] = tolower( q_str[ j++ ] );
                         break;
 
                     case 2:
@@ -1151,7 +1151,7 @@ double AlignStrings( char * const r_str
                         break;
 
                     case -1:
-                        (*r_res)[ k ] = r_str[ i++ ];
+                        (*r_res)[ k ] = tolower( r_str[ i++ ] );
                         (*q_res)[ k ] = gap;
                         break;
 
