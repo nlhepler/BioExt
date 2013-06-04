@@ -9,6 +9,7 @@
 
 #include "math.hpp"
 #include "rateclass.hpp"
+#include "util.hpp"
 
 
 using std::cerr;
