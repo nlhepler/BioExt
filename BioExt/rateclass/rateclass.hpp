@@ -23,7 +23,7 @@ namespace rateclass
 
     public:
         rateclass_t( const std::vector< std::pair< int, int > > & data, const int factor = 1 );
-        void operator()(
+        void learn(
             double & lg_L,
             double & aicc,
             std::vector< std::pair< double, double > > & params,

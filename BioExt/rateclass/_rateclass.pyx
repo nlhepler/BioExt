@@ -1,8 +1,10 @@
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 
-cdef extern from "rateclass.hpp":
+cdef extern from "math.hpp" namespace "math":
     double prob_background(double, double, int, int)
+
+cdef extern from "rateclass.hpp" namespace "rateclass":
     cdef cppclass rateclass_t:
         rateclass_t(vector[pair[int, int]]&, int) except +
         void learn(double&, double&, vector[pair[double, double]]&)

@@ -9,7 +9,6 @@
 
 #include "math.hpp"
 #include "rateclass.hpp"
-#include "util.hpp"
 
 
 using std::cerr;
@@ -251,7 +250,7 @@ namespace rateclass
     }
 
 
-    void rateclass_t::operator()(
+    void rateclass_t::learn(
             double & lg_L,
             double & aicc,
             vector< pair< double, double > > & params,
