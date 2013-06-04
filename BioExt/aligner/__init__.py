@@ -295,7 +295,7 @@ class Aligner:
             query_aligned_ = query_aligned
 
         # normalize score to per-position
-        score /= len(query_) / 3 if self.__do_codon else len(query_)
+        score /= (len(query_) / 3) if self.__do_codon else len(query_)
 
         return score, ref_aligned_, query_aligned_
 
