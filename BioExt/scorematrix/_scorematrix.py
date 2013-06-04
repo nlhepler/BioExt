@@ -138,41 +138,69 @@ class ScoreMatrix(object):
                 warn("unknown letter '%s', ignoring" % l)
         return score
 
-    def freqs(self, bias=None):
-        from scipy.linalg import eig
+    def freqs(self, ratio=1000.0):
+
+        def val(matrix, freqs, lam):
+            return ((np.exp(matrix * lam) * freqs).T * freqs).sum() - 1
+
+        def deriv(matrix, freqs, skipidx, lam):
+            return (((np.exp(matrix * lam) * matrix) * freqs).T * freqs).sum()
+
+        def bisection(matrix, freqs, lam0=0.2, tol=1e-7):
+            left = lam0
+            while True:
+                fx = val(matrix, freqs, left)
+                if fx < 0:
+                    break
+                left /= 2
+
+            right = lam0
+            while True:
+                fx = val(matrix, freqs, right)
+                if fx > 0:
+                    break
+                right *= 2
+
+            mid = None
+            while True:
+                mid = (left + right) / 2
+                if mid == left or mid == right:
+                    break
+                fx = val(matrix, freqs, mid)
+                if abs(fx) < tol:
+                    break
+                if fx > 0:
+                    right = mid
+                else:
+                    left = mid
+
+            return mid
 
         N = len(self.__letters)
-        unif = 1 / N
-
-        if bias is None:
-            bias = 10 ** int(np.log10(unif) // 1)
-        elif bias < 0 or bias > unif:
-            raise ValueError(
-                'bias must be a probability between [0, {0}]'.format(unif)
-                )
-
+        freqs = np.ones((N,), dtype=float)
         matrix = self.tondarray()
-        # convert to rate matrix
-        matrix = np.subtract(matrix.T, matrix[np.eye(N, dtype=bool)]).T
-        matrix = np.divide(matrix.T, matrix.sum(axis=1)).T
-        # compute left eigenvectors
-        w, vl, _ = eig(matrix, left=True)
-        # extract the frequencies
-        freqs = vl.T[np.abs(w - 1) < 1e-7].reshape((N,))
+        skipidx = self.__letters.find('*')
 
-        # handle bias
-        if any(freqs < bias):
-            freqs -= freqs.min()
-            bias_ = bias * freqs.sum() / (1.0 - N * bias)
-            freqs += bias_
+        if skipidx >= 0:
+            unif = ratio / (ratio * (N - 1) + 1)
+            freqs[:] = unif
+            freqs[skipidx] = unif / ratio
 
-        # normalize
         freqs /= freqs.sum()
 
-        if freqs.dtype == complex:
-            freqs = (f.real for f in freqs)
+        if matrix.max() < 0:
+            raise ValueError('unsolvable lambda: no positive score')
 
-        return OrderedDict(zip(self.__letters, freqs))
+        e = ((matrix * freqs).T * freqs).sum()
+        if e > 0:
+            raise ValueError('unsolvable lambda: non-negative expectation')
+
+        lam = bisection(matrix, freqs)
+        freqs_ = ((np.exp(matrix * lam) * freqs).T * freqs).sum(axis=0)
+
+        freqs_ /= freqs_.sum()
+
+        return OrderedDict(zip(self.__letters, freqs_))
 
 
 class DNAScoreMatrix(ScoreMatrix):
