@@ -138,7 +138,7 @@ class ScoreMatrix(object):
                 warn("unknown letter '%s', ignoring" % l)
         return score
 
-    def freqs(self, ratio=1000.0):
+    def freqs(self):
 
         def val(matrix, freqs, lam):
             return ((np.exp(matrix * lam) * freqs).T * freqs).sum() - 1
@@ -182,9 +182,7 @@ class ScoreMatrix(object):
         skipidx = self.__letters.find('*')
 
         if skipidx >= 0:
-            unif = ratio / (ratio * (N - 1) + 1)
-            freqs[:] = unif
-            freqs[skipidx] = unif / ratio
+            freqs[skipidx] = 0
 
         freqs /= freqs.sum()
 
