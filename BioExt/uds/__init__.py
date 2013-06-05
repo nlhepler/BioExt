@@ -75,7 +75,7 @@ def _align_par(
         n_jobs = -1
 
     if n_jobs == 0:
-        n_jobs = None
+        n_jobs = 1
 
     aln = Aligner(
         score_matrix,

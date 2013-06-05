@@ -1,6 +1,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -57,7 +58,7 @@
 
 //____________________________________________________________________________________
 
-#define ALLOCA( type, len ) ( (type *) malloc( sizeof( type ) * ( len ) ) )
+#define ALLOCA( type, len ) ( (type *) calloc( ( len ), sizeof( type ) ) )
 #define ISNULL( var ) ( ( var ) == NULL )
 
 #define MAX(a, b) ( (( a ) > ( b )) ? ( a ) : ( b ) )
@@ -66,6 +67,37 @@
 #define TRUE  1
 
 #define A_LARGE_NUMBER 1.e100
+
+//____________________________________________________________________________________
+
+void print_score_matrix( FILE * const file
+                       , const double * const score_matrix
+                       , const long score_rows
+                       , const long score_cols
+                       )
+{
+    int i, j;
+
+    for ( i = 0; i < score_rows; ++i ) {
+        if ( i == 0 )
+            fprintf( file, "[" );
+        else
+            fprintf( file, " " );
+        
+        for ( j = 0; j < score_cols; ++j ) {
+            const double v = score_matrix[ i * score_cols + j ];
+            if ( j == 0 )
+                fprintf( file, "[ % 4.1f", v );
+            else
+                fprintf( file, ", % 4.1f", v );
+        }
+        
+        if ( i == ( score_rows - 1 ) )
+            fprintf( file, " ]]\n" );
+        else
+            fprintf( file, " ],\n" );
+    }
+}
 
 //____________________________________________________________________________________
 
@@ -694,14 +726,9 @@ double AlignStrings( char * const r_str
                 goto end;
             }
 
-            // if this is set, then 8 0-bytes is equivalent to a 0. double
-#ifdef __STDC_IEC_559__
-            memset( score_matrix, 0, score_rows * score_cols );
-            if ( do_affine ) {
-                memset( deletion_matrix, 0, score_rows * score_cols );
-                memset( insertion_matrix, 0, score_rows * score_cols );
-            }
-#else
+            // if this is set, then 8 0-bytes is equivalent to a 0. double,
+            // which is done because we calloc'd
+#ifndef __STDC_IEC_559__
             for ( i = 0; i < score_rows * score_cols; ++i ) {
                 score_matrix[ i ] = 0.;
             }
@@ -1168,6 +1195,54 @@ double AlignStrings( char * const r_str
             }
 
 end:
+#if 0
+            {
+                double max_score = -A_LARGE_NUMBER;
+
+                if ( do_codon ) {
+                    long l, m, n;
+
+                    for ( i = 0; i < char_count; ++i ) {
+                        for ( j = 0; j < char_count; ++j ) {
+                            for ( k = 0; k < char_count; ++k ) {
+                                const long r_codon = ( i * char_count + j ) * char_count + k;
+                                for ( l = 0; l < char_count; ++l ) {
+                                    for ( m = 0; m < char_count; ++m ) {
+                                        for ( n = 0; n < char_count; ++n ) {
+                                            const long q_codon = ( l * char_count + m ) * char_count + n;
+                                            const double v = cost_matrix[ r_codon * cost_stride + q_codon ];
+                                            if ( v > max_score )
+                                                max_score = v;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else {
+                    for ( i = 0; i < char_count; ++i ) {
+                        const long r_char = char_map[ i ];
+                        for ( j = 0; j < char_count; ++j ) {
+                            const long q_char = char_map[ j ];
+                            const double v = cost_matrix[ r_char * cost_stride + q_char ];
+                            if ( v > max_score )
+                                max_score = v;
+                        }
+                    }
+                }
+   
+                fprintf( stderr, "max_score: %g\n", max_score );
+
+                const double scorep = score / ( 1.0 * q_len / ref_stride );
+    
+                if ( scorep > max_score ) {
+                    fprintf( stderr, "\nscore: %g, seq: %s\n", score / ( 1.0 * q_len / ref_stride ), *q_res );
+                    print_score_matrix( stderr, score_matrix, score_rows, score_cols );
+                }
+            }
+#endif
+
             free( edit_ops );
             free( score_matrix );
             free( deletion_matrix );
