@@ -138,67 +138,72 @@ class ScoreMatrix(object):
                 warn("unknown letter '%s', ignoring" % l)
         return score
 
-    def freqs(self):
+    def freqs(self, tol=1e-7):
+        from scipy.optimize import minimize
 
-        def val(matrix, freqs, lam):
-            return ((np.exp(matrix * lam) * freqs).T * freqs).sum() - 1
+        def M(lam, matrix):
+            return np.exp(matrix * lam)
 
-        def deriv(matrix, freqs, skipidx, lam):
-            return (((np.exp(matrix * lam) * matrix) * freqs).T * freqs).sum()
+        def Y(lam, matrix):
+            return np.linalg.inv(M(lam, matrix))
 
-        def bisection(matrix, freqs, lam0=0.2, tol=1e-7):
-            left = lam0
-            while True:
-                fx = val(matrix, freqs, left)
-                if fx < 0:
-                    break
-                left /= 2
+        def f(lam, matrix):
+            return (Y(lam, matrix).sum() - 1) ** 2
 
-            right = lam0
-            while True:
-                fx = val(matrix, freqs, right)
-                if fx > 0:
-                    break
-                right *= 2
+#         def bisection(matrix):
+#             init = 1.0 / 3
+#             left = init
+#             while f(left, matrix) > 0:
+#                 left /= 2
+#
+#             right = init
+#             while f(right, matrix) < 0:
+#                 right *= 2
+#
+#             print('left:', left, 'right:', right)
+#
+#             while True:
+#                 mid = (left + right) / 2
+#                 if mid == left or mid == right:
+#                     return mid
+#                 fx = f(mid, matrix)
+#                 print('mid:', mid, 'fx:', fx)
+#                 if abs(fx) < tol:
+#                     return mid
+#                 elif fx < 0:
+#                     left = mid
+#                 else:
+#                     right = mid
 
-            mid = None
-            while True:
-                mid = (left + right) / 2
-                if mid == left or mid == right:
-                    break
-                fx = val(matrix, freqs, mid)
-                if abs(fx) < tol:
-                    break
-                if fx > 0:
-                    right = mid
-                else:
-                    left = mid
+        if isinstance(self, DNAScoreMatrix):
+            valid_letters = set('ACGT')
+        elif isinstance(self, ProteinScoreMatrix):
+            valid_letters = set('ARNDCQEGHILKMFPSTWYV')
+        else:
+            valid_letters = set(self.letters)
 
-            return mid
+        indices = np.array([letter in valid_letters for letter in self.letters], dtype=bool)
+        matrix = self.tondarray()[indices, :][:, indices]
 
-        N = len(self.__letters)
-        freqs = np.ones((N,), dtype=float)
-        matrix = self.tondarray()
-        skipidx = self.__letters.find('*')
+        res = minimize(f, 1.0 / 3, args=(matrix,), tol=tol)
 
-        if skipidx >= 0:
-            freqs[skipidx] = 0
+        if not res.success:
+            raise RuntimeError('unable to infer frequency distribution')
 
+        lam = res.x
+#       lam = bisection(matrix)
+        freqs = np.zeros((len(self.letters),), dtype=float)
+        freqs[indices] = Y(lam, matrix).sum(axis=0)
         freqs /= freqs.sum()
 
-        if matrix.max() < 0:
-            raise ValueError('unsolvable lambda: no positive score')
+#         if matrix.max() < 0:
+#             raise ValueError('unsolvable lambda: no positive score')
+#
+#         e = matrix.dot(freqs).dot(freqs)
+#         if e > 0:
+#             raise ValueError('unsolvable lambda: non-negative expectation')
 
-        e = ((matrix * freqs).T * freqs).sum()
-        if e > 0:
-            raise ValueError('unsolvable lambda: non-negative expectation')
-
-        lam = bisection(matrix, freqs)
-        freqs_ = ((np.exp(matrix * lam) * freqs).T * freqs).sum(axis=0)
-
-        freqs_ /= freqs_.sum()
-
-        return OrderedDict(zip(self.__letters, freqs_))
+        return OrderedDict(zip(self.__letters, freqs))
 
 
 class DNAScoreMatrix(ScoreMatrix):
