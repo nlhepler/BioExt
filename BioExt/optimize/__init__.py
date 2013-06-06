@@ -1,4 +1,9 @@
-
+"""
+This was all lifted from scipy master on June 6, 2013.
+The license for this code is therefore different from everything else,
+and is the standard 3-clause BSD license found in LICENSE.txt in the
+same directory as this file.
+"""
 from __future__ import division, print_function
 
 import numpy
