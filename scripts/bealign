@@ -2,10 +2,13 @@
 
 from __future__ import division, print_function
 
+import sys
+
 from Bio import SeqIO
 
 from BioExt.io import BamIO
 from BioExt.misc import compute_cigar, gapless
+from BioExt.scorematrix import FrequenciesError
 from BioExt.uds import _align_par
 
 
@@ -55,27 +58,34 @@ def main(
             reference
             )
 
-    _align_par(
-        reference,
-        records,
-        score_matrix,
-        do_codon,
-        reverse_complement,
-        expected_identity,
-        discard,
-        output,
-        quiet
-        )
+    retcode = -1
+    try:
+        _align_par(
+            reference,
+            records,
+            score_matrix,
+            do_codon,
+            reverse_complement,
+            expected_identity,
+            discard,
+            output,
+            quiet
+            )
+        if do_sort:
+            BamIO.sort(output_file)
+        retcode = 0
+    except FrequenciesError:
+        print(
+            'supplied score-matrix does not imply a frequency distribution:',
+            'please choose another matrix if you must filter on expected identity',
+            file=sys.stderr
+            )
 
-    if do_sort:
-        BamIO.sort(output_file)
-
-    return 0
+    return retcode
 
 
 if __name__ == '__main__':
     import argparse
-    import sys
 
     from os import remove
     from os.path import getsize

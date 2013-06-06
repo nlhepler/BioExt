@@ -9,9 +9,11 @@ from warnings import warn
 import numpy as np
 
 from BioExt.collections import OrderedDict
+from BioExt.optimize import minimize_bfgs
 
 
 __all__ = [
+    'FrequenciesError',
     'DNA65',
     'DNA70',
     'DNA80',
@@ -26,6 +28,10 @@ __all__ = [
 
 pletters = 'ARNDCQEGHILKMFPSTWYVBZX*'
 dletters = 'ACGT'
+
+
+class FrequenciesError(RuntimeError):
+    pass
 
 
 def parse_scorematrix(smpath):
@@ -139,7 +145,6 @@ class ScoreMatrix(object):
         return score
 
     def freqs(self, tol=1e-7):
-        from scipy.optimize import minimize
 
         def M(lam, matrix):
             return np.exp(matrix * lam)
@@ -149,31 +154,6 @@ class ScoreMatrix(object):
 
         def f(lam, matrix):
             return (Y(lam, matrix).sum() - 1) ** 2
-
-#         def bisection(matrix):
-#             init = 1.0 / 3
-#             left = init
-#             while f(left, matrix) > 0:
-#                 left /= 2
-#
-#             right = init
-#             while f(right, matrix) < 0:
-#                 right *= 2
-#
-#             print('left:', left, 'right:', right)
-#
-#             while True:
-#                 mid = (left + right) / 2
-#                 if mid == left or mid == right:
-#                     return mid
-#                 fx = f(mid, matrix)
-#                 print('mid:', mid, 'fx:', fx)
-#                 if abs(fx) < tol:
-#                     return mid
-#                 elif fx < 0:
-#                     left = mid
-#                 else:
-#                     right = mid
 
         if isinstance(self, DNAScoreMatrix):
             valid_letters = set('ACGT')
@@ -185,23 +165,19 @@ class ScoreMatrix(object):
         indices = np.array([letter in valid_letters for letter in self.letters], dtype=bool)
         matrix = self.tondarray()[indices, :][:, indices]
 
-        res = minimize(f, 1.0 / 3, args=(matrix,), tol=tol)
+        res = minimize_bfgs(f, 1.0 / 3, args=(matrix,), tol=tol)
+        msg = 'unable to determine frequency distribution'
 
         if not res.success:
-            raise RuntimeError('unable to infer frequency distribution')
+            raise FrequenciesError(msg)
 
         lam = res.x
-#       lam = bisection(matrix)
         freqs = np.zeros((len(self.letters),), dtype=float)
         freqs[indices] = Y(lam, matrix).sum(axis=0)
         freqs /= freqs.sum()
 
-#         if matrix.max() < 0:
-#             raise ValueError('unsolvable lambda: no positive score')
-#
-#         e = matrix.dot(freqs).dot(freqs)
-#         if e > 0:
-#             raise ValueError('unsolvable lambda: non-negative expectation')
+        if not (freqs >= 0).all():
+            raise FrequenciesError(msg)
 
         return OrderedDict(zip(self.__letters, freqs))
 
