@@ -47,7 +47,7 @@ def main(
 
     if discard_handle:
         def discard(record):
-            SeqIO.write([gapless(record)], discard_handle, 'fasta')
+            SeqIO.write([gapless(record.upper())], discard_handle, 'fasta')
     else:
         discard = None
 
