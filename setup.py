@@ -56,6 +56,8 @@ setup(
         'BioExt.aligner',
         'BioExt.collections',
         'BioExt.errorize',
+        'BioExt.freetype',
+        'BioExt.freetype.ft_enums',
         'BioExt.graphing',
         'BioExt.io',
         'BioExt.io.BamIO',
@@ -82,6 +84,8 @@ setup(
         'BioExt.aligner': 'BioExt/aligner',
         'BioExt.collections': 'BioExt/collections',
         'BioExt.errorize': 'BioExt/errorize',
+        'BioExt.freetype': 'BioExt/freetype',
+        'BioExt.freetype.ft_enums': 'BioExt/freetype/ft_enums',
         'BioExt.graphing': 'BioExt/graphing',
         'BioExt.io': 'BioExt/io',
         'BioExt.io.BamIO': 'BioExt/io/BamIO',
@@ -105,6 +109,7 @@ setup(
         },
     package_data={
         'BioExt': [
+            'data/fonts/ttf/*.ttf',
             'data/scorematrices/*.txt'
             ] + _installrefdirs
         },
@@ -113,12 +118,16 @@ setup(
         'scripts/bam2msa',
         'scripts/bamclip',
         'scripts/bealign',
-        # 'scripts/consensus',
+        'scripts/graphmsa',
+        'scripts/consensus',
+        'scripts/seqlogo',
+        'scripts/translate'
         # 'scripts/variants'
         ],
     ext_modules=ext_modules,
     requires=[
         'Bio (>=1.58)',
+        'matplotlib (>=1.2.1)',
         'numpy (>=1.6)',
         ]
     )

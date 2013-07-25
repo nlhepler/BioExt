@@ -30,7 +30,8 @@ __all__ = [
     'compute_cigar',
     'gapless',
     'gapful',
-    'labelstream'
+    'labelstream',
+    'clip'
     ]
 
 
@@ -333,13 +334,15 @@ def gapless(seq):
         raise ValueError('seq must have type SeqRecord, Seq, or str')
 
 
+_cigar_regexp = re_compile(r'([0-9]+)([M=XID])')
+
+
 def gapful(record, insertions=True):
-    regexp = re_compile(r'([0-9]+)([M=XID])')
     p = 0
     modes = 'M=XI' if insertions else 'M=X'
     cigparts = []
     seqparts = ['-' * (record.annotations['position'])]
-    for m in regexp.finditer(record.annotations['CIGAR']):
+    for m in _cigar_regexp.finditer(record.annotations['CIGAR']):
         num, mode = int(m.group(1)), m.group(2)
         if mode in modes:
             cigparts.append(m.group(0))
@@ -350,6 +353,58 @@ def gapful(record, insertions=True):
             p += num
     return SeqRecord(
         Seq(''.join(seqparts), record.seq.alphabet),
+        id=record.id,
+        name=record.name,
+        dbxrefs=copy(record.dbxrefs),
+        # features = seq.features,
+        description=record.description,
+        annotations=copy(record.annotations),
+        # letter_annotations=record.letter_annotations
+        )
+
+
+def clip(record, start, end, insertions=True, span=False):
+    if span and record.annotations['position'] > start:
+        return None
+
+    modes = 'M=XI' if insertions else 'M=X'
+
+    def seqpos():
+        pos = record.annotations['position']
+        seq = iter(record.seq)
+        for m in _cigar_regexp.finditer(record.annotations['CIGAR']):
+            num, mode = int(m.group(1)), m.group(2).upper()
+            if mode in modes:
+                for _ in range(num):
+                    yield (next(seq), pos)
+                    if mode in 'M=X':
+                        pos += 1
+            elif mode == 'D':
+                pos += num
+
+    if span:
+        minpos = None
+        maxpos = None
+        bases = []
+
+        for base, pos in seqpos():
+            bases.append(base)
+            if minpos is None or pos < minpos:
+                minpos = pos
+            if maxpos is None or pos > maxpos:
+                maxpos = pos
+
+        if minpos is None or minpos > start:
+            return None
+        elif maxpos is None or maxpos < (end - 1):
+            return None
+        else:
+            seq_ = ''.join(bases)
+    else:
+        seq_ = ''.join(base for base, pos in seqpos() if pos >= start and pos < end)
+
+    return SeqRecord(
+        Seq(seq_, record.seq.alphabet),
         id=record.id,
         name=record.name,
         dbxrefs=copy(record.dbxrefs),

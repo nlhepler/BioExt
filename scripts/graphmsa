@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+
+from __future__ import division, print_function
+
+import sys
+
+from argparse import ArgumentParser, FileType
+
+from Bio import AlignIO
+
+from BioExt.graphing import graph_coverage_majority
+
+
+def main(infile, mode, nseq, outfile, refidx):
+    msa = AlignIO.read(infile, 'fasta')
+
+    graph_coverage_majority(
+        msa,
+        mode,
+        nseq,
+        outfile,
+        format='pdf',
+        refidx=refidx
+    )
+
+    return 0
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser(
+        description='draw a coverage and/or majority graph of a multiple sequence alignment'
+        )
+    parser.add_argument(
+        'input',
+        metavar='MSA',
+        type=FileType('r'),
+        help='aligned FASTA file'
+        )
+    parser.add_argument(
+        'output',
+        metavar='PDF',
+        help='output PDF file'
+        )
+    parser.add_argument(
+        '-m', '--mode',
+        choices=('coverage', 'majority', 'both'), default='both',
+        help='graph coverage, majority, or both'
+        )
+    parser.add_argument(
+        '-n', '--nseq',
+        type=int, default=None,
+        help='number of input sequences'
+        )
+    parser.add_argument(
+        '-r', '--refidx',
+        type=int, default=None,
+        help='omit reference sequence which is REFIDX-th in the file (1-indexed)'
+        )
+
+    ns = None
+    retcode = -1
+    try:
+        ns = parser.parse_args()
+
+        # is 1-indexed
+        if ns.refidx is not None:
+            ns.refidx -= 1
+
+        retcode = main(ns.input, ns.mode, ns.nseq, ns.output, ns.refidx)
+    finally:
+        if ns is not None:
+            if not ns.input in (None, sys.stdin):
+                ns.input.close()
+    sys.exit(retcode)

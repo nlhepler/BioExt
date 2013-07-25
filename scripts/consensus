@@ -4,7 +4,6 @@ import os
 import signal
 import sys
 
-from operator import itemgetter
 from random import shuffle
 from re import compile as re_compile
 
@@ -12,16 +11,23 @@ from Bio.Alphabet import single_letter_alphabet
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from BioExt.io import BamIO
+from BioExt.io._SamBamIO import _to_seqrecord
 from BioExt.joblib import Parallel, delayed
+from BioExt.misc import clip
 from BioExt.quiver import NoQVsModelParams, extractFeatures, refineConsensus
 
 import ConsensusCore as cc
 
+import pysam
+
 
 # global alignment seems to work best ... I don't know why
-LOCAL_ALIGNMENT = True # False
+USE_LOCAL_ALIGNMENT = False
 QV_NITER = 20
+SHUFFLE_WINDOW_RATIO = 0.2
+SHUFFLE_STRIDE_RATIO = 0.5
+
+ndispatched = 0
 realph = re_compile(r'[^ACGT]')
 
 
@@ -41,24 +47,43 @@ def proper(string):
     return realph.sub('', string.upper())
 
 
-def _consensus(reads):
-    shuffle(reads)
-    config = cc.PoaConfig()
-    config.UseLocalAlignment = LOCAL_ALIGNMENT
-    return cc.PoaConsensus.FindConsensus(
+def _consensus(reads, quiver):
+
+    poa_config = cc.PoaConfig(USE_LOCAL_ALIGNMENT)
+
+    consensus = cc.PoaConsensus.FindConsensus(
         reads,
-        config
+        poa_config
         ).Sequence()
+
+    if quiver:
+        qv_config = cc.QuiverConfig(
+            cc.QvModelParams(*NoQVsModelParams.values()),
+            cc.ALL_MOVES,
+            cc.BandingOptions(4, 5),
+            -12.5
+            )
+
+        mms = cc.SparseSseQvMultiReadMutationScorer(qv_config, consensus)
+
+        for read in reads:
+            mms.AddRead(extractFeatures(read), cc.FORWARD_STRAND)
+
+        consensus, _ = refineConsensus(mms, QV_NITER)
+
+    return consensus
 
 
 def main(
-    bam_handle,
-    output_handle,
-    coverage,
-    nestimates,
-    quiver,
-    window_size
-    ):
+        bam_handle,
+        output_handle,
+        max_coverage,
+        min_coverage,
+        window_size,
+        window_stride,
+        quiver,
+        quiet
+        ):
 
     try:
         signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -73,80 +98,79 @@ def main(
     if n_jobs == 0:
         n_jobs = None
 
-    # sort by left position, then filter empty reads
-    reads = [
-        read
-        for read, _ in sorted(
-            (
-                (proper(str(seq.seq)), left_pos(seq))
-                for seq in BamIO.parse(bam_handle)
-                ),
-            key=itemgetter(1)
-            )
-        if len(read)
-        ]
+    samfile = None
+    try:
+        pysam.index(bam_handle)
+        samfile = pysam.Samfile(bam_handle, 'rb')
+        reference = samfile.header['SQ'][0]['SN']
+        alignment_length = samfile.header['SQ'][0]['LN']
 
-    if not reads:
-        raise RuntimeError(
-            'no valid reads present'
-            )
+        windows = []
 
-    # divide by 2 because windows are drawn in forward and reverse
-    stride = max(1, coverage // (nestimates // 2))
-    windows = []
+        for start in range(0, alignment_length, window_stride):
+            end = min(alignment_length, start + window_size)
+            windows.append((start, end))
 
-    for start in range(0, len(reads), stride):
-        stop = min(len(reads), start + coverage)
-        windows.append((start, stop))
+        if quiet:
+            def delayed_(fn):
+                return delayed(fn)
+        else:
+            def delayed_(fn):
+                global ndispatched
+                print('\rdispatched: {0:d} jobs'.format(ndispatched), end='', file=sys.stderr)
+                sys.stderr.flush()
+                ndispatched += 1
+                return delayed(fn)
 
-    for stop in range(len(reads), 0, -stride):
-        start = max(0, stop - coverage)
-        windows.append((start, stop))
+        def read_groups():
+            for start, end in windows:
+                reads = [
+                    str(read_.seq)
+                    for read_ in (
+                        clip(_to_seqrecord(samfile, read), start, end, span=True)
+                        for read in samfile.fetch(reference, start, end)
+                        )
+                    if read_
+                    ]
+                if len(reads) < min_coverage:
+                    continue
+                shuffle(reads)
+                yield reads[:max_coverage]
 
-    parts = list(Parallel(
-        n_jobs=n_jobs,
-        verbose=0,
-        pre_dispatch='10 * n_jobs'
-        )(
-            delayed(_consensus)(reads[start:stop])
-            for start, stop in windows
-            )
-        )
-
-    # is this a good thing?
-    shuffle(parts)
-
-    poa_config = cc.PoaConfig()
-    poa_config.UseLocalAlignment = LOCAL_ALIGNMENT
-    consensus = cc.PoaConsensus.FindConsensus(parts, poa_config).Sequence()
-
-    id_ = 'poa_consensus'
-
-    # refine the ultimate consensus using Quiver
-    if quiver:
-        qv_config = cc.QuiverConfig(
-            cc.QvModelParams(*NoQVsModelParams.values()),
-            cc.ALL_MOVES,
-            cc.BandingOptions(4, 5),
-            -12.5
+        parts = list(Parallel(
+            n_jobs=n_jobs,
+            verbose=0,
+            pre_dispatch='3 * n_jobs'
+            )(
+                delayed_(_consensus)(reads, quiver)
+                for reads in read_groups()
+                )
             )
 
-        mms = cc.SparseSseQvMultiReadMutationScorer(qv_config, consensus)
+        if not quiet:
+            print('', file=sys.stderr)
 
-        for read in reads:
-            mms.AddRead(extractFeatures(read), cc.FORWARD_STRAND)
+        poa_config = cc.PoaConfig(True)
 
-        consensus, converge = refineConsensus(mms, QV_NITER)
-        id_ = 'qv_consensus'
+        consensus = cc.PoaConsensus.FindConsensus(
+            parts,
+            poa_config
+            ).Sequence()
 
-    output_handle.write(
-        SeqRecord(
-            Seq(consensus, single_letter_alphabet),
-            id=id_,
-            name=id_,
-            description=id_
-            ).format('fasta')
-        )
+        id_ = 'consensus'
+
+        output_handle.write(
+            SeqRecord(
+                Seq(consensus, single_letter_alphabet),
+                id=id_,
+                name=id_,
+                description=id_
+                ).format('fasta')
+            )
+
+    finally:
+        if samfile:
+            samfile.close()
 
     return 0
 
@@ -175,18 +199,18 @@ if __name__ == '__main__':
         help='the input sequences, in BAM format'
         )
     parser.add_argument(
-        '-c', '--coverage',
-        metavar='NUM',
+        '-c', '--max-coverage',
+        metavar='MAX_COVERAGE',
         type=posint,
-        default=200,
-        help='number of reads to use in intermediate POA consensus estimation'
+        default=250,
+        help='maximum number of reads to use when estimating consensus'
         )
     parser.add_argument(
-        '-n', '--nestimates',
-        metavar='NUM',
+        '-m', '--min-coverage',
+        metavar='MIN_COVERAGE',
         type=posint,
-        default=40,
-        help='number of intermediate POA consensus estimates'
+        default=100,
+        help='minimum number of reads to use for estimating consensus'
         )
     parser.add_argument(
         '-o', '--output',
@@ -196,16 +220,28 @@ if __name__ == '__main__':
         help='output FASTA file'
         )
     parser.add_argument(
-        '-q', '--quiver',
+        '-w', '--window-size',
+        metavar='WINDOW_SIZE',
+        type=posint,
+        default=90,
+        help='minimum size of sliding windows (use a multiple of 3)'
+        )
+    parser.add_argument(
+        '-s', '--window-stride',
+        metavar='WINDOW_STRIDE',
+        type=posint,
+        default=30,
+        help='stride for sliding window consensus estimation'
+        )
+    parser.add_argument(
+        '-Q', '--quiver',
         action='store_true',
         help='use Quiver algorithm to refine consensus'
         )
     parser.add_argument(
-        '-w', '--window-size',
-        metavar='NUM',
-        type=posint,
-        default=25,
-        help='default sliding window size'
+        '-q', '--quiet',
+        action='store_true',
+        help='do not report the number of sequences dispatched'
         )
 
     args = None
@@ -217,10 +253,12 @@ if __name__ == '__main__':
         retcode = main(
             bam_file,
             args.output,
-            args.coverage,
-            args.nestimates,
+            args.max_coverage,
+            args.min_coverage,
+            args.window_size,
+            args.window_stride,
             args.quiver,
-            args.window_size
+            args.quiet
             )
     finally:
         if args:

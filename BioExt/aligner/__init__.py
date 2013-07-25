@@ -28,6 +28,9 @@ def _protein_to_codon(protein_matrix, non_identity_penalty=0.5):
             for k in range(4):
                 cdn = ''.join(dletters[l] for l in (i, j, k))
                 aa = pletters.index(_translate(cdn))
+                # if it's a stop codon, leave it at -1e4
+#                 if aa == '*':
+#                     continue
                 mapping[aa].append(16 * i + 4 * j + k)
     protein_matrix_ = protein_matrix.tondarray()
     M, N = protein_matrix_.shape

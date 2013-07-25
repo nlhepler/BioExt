@@ -8,7 +8,7 @@ import numpy as np
 from matplotlib.path import Path
 from matplotlib.patches import PathPatch
 
-from freetype import *
+from BioExt.freetype import *
 
 
 class Basefont(object):

@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+
+from __future__ import division, print_function
+
+import sys
+
+from argparse import ArgumentParser, ArgumentTypeError, FileType
+
+from Bio import AlignIO
+
+from BioExt.graphing import graph_logo
+
+
+def csvtype(string):
+    return string.split(',')
+
+
+def spectype(string):
+    try:
+        colspec = []
+        if ':' in string:
+            xyz = [int(v) for v in string.split(':', 2) if v]
+            xyz[0] -= 1
+            colspec.extend(v for v in range(*xyz))
+        else:
+            colspec.extend(int(v) - 1 for v in string.split(',') if v)
+        return colspec
+    except ValueError:
+        msg = (
+            'COLSPEC must be a comma-delimited list of 1-indices or '
+            'a colon-delimited range specification start:stop[:skip]'
+            )
+        raise ArgumentTypeError(msg)
+
+
+def main(infile, colspec, filename, labels, refidx):
+    msa = AlignIO.read(infile, 'fasta')
+    graph_logo(msa, colspec, filename, format='pdf', labels=labels, refidx=refidx)
+    return 0
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser(description='generate a SeqLogo from an MSA')
+    parser.add_argument(
+        '-l', '--labels',
+        metavar='LABELS',
+        type=csvtype,
+        help='comma-delimited list of column labels'
+    )
+    parser.add_argument(
+        'input',
+        metavar='MSA',
+        type=FileType('r'),
+        default=sys.stdin,
+        help='aligned FASTA file'
+    )
+    parser.add_argument(
+        'colspec',
+        metavar='COLSPEC',
+        type=spectype,
+        help=(
+            'comma-delimited list of 1-indices or '
+            'a colon-delimited range specification start:stop[:skip]'
+            )
+    )
+    parser.add_argument(
+        'output',
+        metavar='PDF',
+        type=FileType('w'),
+        default=sys.stdout,
+        help='output PDF file'
+    )
+    parser.add_argument(
+        '-r', '--refidx',
+        type=int, default=None,
+        help='omit reference sequence which is REFIDX-th in the file (1-indexed)'
+    )
+
+    ns = None
+    retcode = -1
+    try:
+        ns = parser.parse_args()
+        filename = ns.output.name
+        ns.output.close()
+
+        if ns.refidx is not None:
+            ns.refidx -= 1
+
+        retcode = main(ns.input, ns.colspec, filename, ns.labels, ns.refidx)
+    finally:
+        if ns is not None:
+            if ns.input not in (None, sys.stdin):
+                ns.input.close()
+    sys.exit(retcode)

@@ -17,8 +17,7 @@ __all__ = [
 
 
 def parse(path, index=True):
-    for record in _SamBamIO._parse('rb', path, index):
-        yield record
+    return _SamBamIO._parse('rb', path, index)
 
 
 def write(records, path, reference=None, new_style=False, header=None):
