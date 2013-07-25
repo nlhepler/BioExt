@@ -42,6 +42,9 @@ cdef extern from "alignment.h":
         dtype_t *,
         dtype_t *,
         dtype_t *,
+        dtype_t *,
+        dtype_t *,
+        dtype_t *,
         dtype_t *
         ) nogil
 
@@ -137,7 +140,10 @@ def _align(
         np.ndarray[dtype_t, ndim=2, mode='c'] codon3x5,
         np.ndarray[dtype_t, ndim=2, mode='c'] codon3x4,
         np.ndarray[dtype_t, ndim=2, mode='c'] codon3x2,
-        np.ndarray[dtype_t, ndim=2, mode='c'] codon3x1):
+        np.ndarray[dtype_t, ndim=2, mode='c'] codon3x1,
+        np.ndarray[dtype_t, ndim=1, mode='c'] score_matrix,
+        np.ndarray[dtype_t, ndim=1, mode='c'] deletion_matrix,
+        np.ndarray[dtype_t, ndim=1, mode='c'] insertion_matrix):
 
     # cast from unicode to char *
     cdef char * ref = b_ref
@@ -168,7 +174,10 @@ def _align(
             <dtype_t *> codon3x5.data,
             <dtype_t *> codon3x4.data,
             <dtype_t *> codon3x2.data,
-            <dtype_t *> codon3x1.data)
+            <dtype_t *> codon3x1.data,
+            <dtype_t *> score_matrix.data,
+            <dtype_t *> deletion_matrix.data,
+            <dtype_t *> insertion_matrix.data)
 
         if ref_aligned == NULL or query_aligned == NULL:
             free(ref_aligned)

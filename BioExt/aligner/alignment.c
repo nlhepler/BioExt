@@ -627,6 +627,9 @@ double AlignStrings( char * const r_str
                    , const double * const codon3x4
                    , const double * const codon3x2
                    , const double * const codon3x1
+                   , double * const score_matrix
+                   , double * const deletion_matrix
+                   , double * const insertion_matrix
                    )
 {
     const unsigned long r_len = strlen( r_str ),
@@ -708,17 +711,21 @@ double AlignStrings( char * const r_str
             long edit_ptr = 0;
             // don't forget the optional termination character
             signed char * const edit_ops = ALLOCA( signed char, r_len + q_len );
+#if 0
             double * const score_matrix = ALLOCA( double, score_rows * score_cols ),
                    * const deletion_matrix  = do_affine ? ALLOCA( double, score_rows * score_cols ) : NULL,
                    * const insertion_matrix = do_affine ? ALLOCA( double, score_rows * score_cols ) : NULL;
+#endif
             // encode each string using the character map (char_map)
             long * const r_enc = ALLOCA( long, r_len ),
                  * const q_enc = ALLOCA( long, q_len );
 
             if ( ISNULL( edit_ops )
+#if 0
               || ISNULL( score_matrix )
               || ( do_affine && ( ISNULL( insertion_matrix )
                                || ISNULL( deletion_matrix  ) ) )
+#endif
               || ISNULL( r_enc )
               || ISNULL( q_enc ) ) {
                 *r_res = NULL;
@@ -726,9 +733,16 @@ double AlignStrings( char * const r_str
                 goto end;
             }
 
+#if 1
             // if this is set, then 8 0-bytes is equivalent to a 0. double,
             // which is done because we calloc'd
-#ifndef __STDC_IEC_559__
+#ifdef __STDC_IEC_559__
+            memset( score_matrix, 0, sizeof( double ) * score_rows * score_cols );
+            if ( do_affine ) {
+                memset( deletion_matrix, 0, sizeof( double ) * score_rows * score_cols );
+                memset( insertion_matrix, 0, sizeof( double ) * score_rows * score_cols );
+            }
+#else
             for ( i = 0; i < score_rows * score_cols; ++i ) {
                 score_matrix[ i ] = 0.;
             }
@@ -738,7 +752,7 @@ double AlignStrings( char * const r_str
                     insertion_matrix[ i ] = 0.;
                 }
 #endif
-
+#endif
             if ( do_codon ) {
                 for ( i = 0; i < r_len; ++i )
                     r_enc[ i ] = char_map[ (int) r_str[ i ] ];
@@ -1244,9 +1258,11 @@ end:
 #endif
 
             free( edit_ops );
+#if 0
             free( score_matrix );
             free( deletion_matrix );
             free( insertion_matrix );
+#endif
             free( r_enc );
             free( q_enc );
         }

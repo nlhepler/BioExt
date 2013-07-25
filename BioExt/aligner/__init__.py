@@ -4,6 +4,7 @@ from __future__ import division, print_function
 import sys
 
 from collections import defaultdict
+from os import getpid
 
 import numpy as np
 
@@ -11,7 +12,7 @@ from Bio.Seq import Seq, translate as _translate
 from Bio.SeqRecord import SeqRecord
 
 from BioExt.aligner._align import _align, _compute_codon_matrices
-from BioExt.misc import enumerate_by_codon, gapless
+from BioExt.misc import gapless
 from BioExt.scorematrix import ProteinScoreMatrix as _ProteinScoreMatrix
 
 
@@ -62,7 +63,11 @@ class Aligner:
         '__codon3x5',
         '__codon3x4',
         '__codon3x2',
-        '__codon3x1'
+        '__codon3x1',
+        '__cached_pid',
+        '__cached_score_matrix',
+        '__cached_deletion_matrix',
+        '__cached_insertion_matrix',
         )
 
     def __init__(
@@ -144,6 +149,10 @@ class Aligner:
         self.__codon3x4 = codon3x4
         self.__codon3x2 = codon3x2
         self.__codon3x1 = codon3x1
+        self.__cached_pid = getpid()
+        self.__cached_score_matrix = np.empty((1,), dtype=float)
+        self.__cached_deletion_matrix = np.empty((1,), dtype=float)
+        self.__cached_insertion_matrix = np.empty((1,), dtype=float)
 
     @staticmethod
     def _expected_score(score_matrix, expected_identity):
@@ -241,6 +250,29 @@ class Aligner:
 #         else:
 #             ns = 0
 
+        # for shared memory safety, recreate matrices if the PID changed
+        current_pid = getpid()
+        if self.__cached_pid != current_pid:
+            self.__cached_pid = current_pid
+            self.__cached_score_matrix = np.empty((1,), dtype=float)
+            self.__cached_deletion_matrix = np.empty((1,), dtype=float)
+            self.__cached_insertion_matrix = np.empty((1,), dtype=float)
+
+        if self.__do_codon:
+            cache_size = (len(ref_) // 3 + 1) * (len(query_) + 1)
+        else:
+            cache_size = (len(ref_) + 1) * (len(query_) + 1)
+
+        if self.__cached_score_matrix.shape[0] < cache_size:
+            self.__cached_score_matrix.resize((cache_size,))
+
+        if do_affine:
+            if self.__cached_deletion_matrix.shape[0] < cache_size:
+                self.__cached_deletion_matrix.resize((cache_size,))
+
+            if self.__cached_insertion_matrix.shape[0] < cache_size:
+                self.__cached_insertion_matrix.resize((cache_size,))
+
         if len(query) == 0:
             score, ref_aligned, query_aligned = float('-Inf'), ref_, '-' * len(ref_)
         else:
@@ -262,7 +294,10 @@ class Aligner:
                 self.__codon3x5,
                 self.__codon3x4,
                 self.__codon3x2,
-                self.__codon3x1
+                self.__codon3x1,
+                self.__cached_score_matrix,
+                self.__cached_deletion_matrix,
+                self.__cached_insertion_matrix
                 )
 
         if sys.version_info >= (3, 0):

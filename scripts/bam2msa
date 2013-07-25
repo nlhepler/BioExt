@@ -7,6 +7,8 @@ from Bio.Align import MultipleSeqAlignment
 from BioExt.io import BamIO
 from BioExt.misc import gapful
 
+import pysam
+
 
 def main(bam_file, out_handle):
 
@@ -17,7 +19,9 @@ def main(bam_file, out_handle):
 
     seqs = [gapful(record, insertions=False) for record in BamIO.parse(bam_file)]
 
-    length = max(len(seq) for seq in seqs)
+    samfile = pysam.Samfile(bam_file, 'rb')
+    length = samfile.header['SQ'][0]['LN']
+    samfile.close()
 
     msa = MultipleSeqAlignment(
         [seq + ('-' * (length - len(seq))) for seq in seqs]

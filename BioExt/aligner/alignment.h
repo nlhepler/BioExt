@@ -20,5 +20,8 @@ double AlignStrings(
     const double * const,
     const double * const,
     const double * const,
-    const double * const
+    const double * const,
+    double * const,
+    double * const,
+    double * const
     );
