@@ -168,43 +168,6 @@ def graph_coverage_majority(
     npos = lst_pos - fst_pos
     xs = np.arange(fst_pos, lst_pos) + 1
 
-    # some heuristic to prevent too many ticks,
-    # is complicated by the start and end dynamically business
-    # 0.477122 jumps an order 10 at 30% of the next order 10
-    specialK = 0.477122
-    xdiv = 10 ** int(np.log10(lst_pos) - specialK) or 1
-    xsep = xdiv * int(npos / 5 / xdiv + 1)
-    xstart = (fst_pos // xsep) * xsep
-    xend = lst_pos + xsep
-    xticks = np.arange(xstart, xend, xsep)
-    # prevent the first two and last two ticks from being too close
-    if len(xticks) > 1:
-        fix = False
-        min_delta = xsep / 4
-        delta = xticks[1] - fst_pos
-        if delta and delta < min_delta:
-            xstart += xsep
-            fix = True
-        delta = lst_pos - xticks[-2]
-        if delta and delta < min_delta:
-            xend -= xsep
-            fix = True
-        if fix:
-            xticks = np.arange(xstart, xend, xsep)
-
-    xticks[0] = fst_pos + 1
-    xticks[-1] = lst_pos
-
-    ydiv = 10 ** int(np.log10(nseq) - specialK) or 1
-    ysep = ydiv * int(nseq / 5 / ydiv + 1)
-    yticks = np.arange(0, nseq + ysep, ysep)
-
-    if len(yticks) > 1:
-        if nseq - yticks[-2] < ysep / 4:
-            yticks = np.arange(0, nseq, ysep)
-
-    yticks[-1] = nseq
-
     alph = set([])
     for seq in alignment:
         alph.update(ltr.upper() for ltr in seq[fst_pos:lst_pos])
@@ -285,18 +248,63 @@ def graph_coverage_majority(
             ax2.patch.set_alpha(0.)
 
     # TICKS
+    ## compute the x-ticks
+    ### some heuristic to prevent too many ticks,
+    ### is complicated by the start and end dynamically business
+    ### 0.477122 jumps an order 10 at 30% of the next order 10
+    magic = 0.477122
+    xdiv = 10 ** int(np.log10(lst_pos) - magic) or 1
+    xsep = xdiv * int(npos / 5 / xdiv + 1)
+    xstart = (fst_pos // xsep) * xsep
+    xend = lst_pos + xsep
+    xticks = np.arange(xstart, xend, xsep)
+    ### prevent the first two and last two ticks from being too close
+    if len(xticks) > 1:
+        fix = False
+        min_delta = xsep / 4
+        delta = xticks[1] - fst_pos
+        if delta and delta < min_delta:
+            xstart += xsep
+            fix = True
+        delta = lst_pos - xticks[-2]
+        if delta and delta < min_delta:
+            xend -= xsep
+            fix = True
+        if fix:
+            xticks = np.arange(xstart, xend, xsep)
+
+    ## first and last tick
+    xticks[0] = fst_pos + 1
+    xticks[-1] = lst_pos
+
+    ## set the x-ticks
+    ax1.set_xlim((fst_pos + 1, lst_pos))
+    ax1.set_xticks(xticks)
+    if mode != 'majority':
+        ax2.set_xticks(xticks)
+
+    ## get the major ticks
     major_ticks = ax1.xaxis.get_major_ticks(len(xticks))
 
-    # disable the first and last tick on the x-axis,
-    # they're redundant and ugly (esp if minH > 0)
+    ## disable the first and last tick on the x-axis,
+    ## they're redundant and ugly (esp if minH > 0)
     major_ticks[0].tick1On = False
     major_ticks[-1].tick1On = False
 
-    ## limits, range
-    ax1.set_xlim((fst_pos + 1, lst_pos))
+    ## compute the y-ticks
+    ydiv = 10 ** int(np.log10(nseq) - magic) or 1
+    ysep = ydiv * int(nseq / 5 / ydiv + 1)
+    yticks = np.arange(0, nseq + ysep, ysep)
+
+    if len(yticks) > 1:
+        if nseq - yticks[-2] < ysep / 4:
+            yticks = np.arange(0, nseq, ysep)
+
+    ## last tick
+    yticks[-1] = nseq
+
+    ## set the y-ticks, limits, range
     if mode == 'majority':
-        ### x-ticks
-        ax1.set_xticks(xticks)
         ### y-ticks
         ax1.set_ylim((0, 1))
         ax1.set_yticks(np.arange(0, 1.1, 0.2))
@@ -308,8 +316,6 @@ def graph_coverage_majority(
             ax1.yaxis.get_ticklabels()
         )
     else:
-        ### x-ticks
-        ax2.set_xticks(xticks)
         ### y-ticks
         ax1.set_ylim((0, nseq))
         ax1.set_yticks(yticks)
@@ -557,10 +563,12 @@ def graph_logo(
     ## set the ticks
     ysep = 0.5 if s < 20 else 1.0
     yticks = np.arange(0, maxbits, ysep, dtype=float)
+
     if maxbits - yticks[-1] < ysep:
         yticks[-1] = maxbits
     else:
         yticks = np.append(yticks, maxbits)
+
     ax.set_yticks(yticks)
     ax.set_xticks(np.arange(1, N + 1, dtype=float) + 0.5)
 
