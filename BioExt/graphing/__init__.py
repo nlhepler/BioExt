@@ -237,6 +237,10 @@ def graph_coverage_majority(
     # move the axis spines off the data
     _adjust_spines_outward(ax1, ('left', 'right'), 18)
 
+    if transparent:
+        fig.patch.set_alpha(0.)
+        ax1.patch.set_alpha(0.)
+
     if mode in ('majority', 'both'):
         if mode == 'majority':
             majorities = counts.max(axis=0) / counts.sum(axis=0)
@@ -267,6 +271,114 @@ def graph_coverage_majority(
         for l in lines:
             l.set_clip_on(False)
 
+    if mode in ('coverage', 'both'):
+        max_cov, min_cov = _max_nonzero_min(coverages)
+
+    if mode in ('majority', 'both'):
+        max_maj, min_maj = _max_nonzero_min(majorities)
+
+    # AXES
+    if mode != 'majority':
+        ax2 = ax1.twinx()
+        _adjust_spines_outward(ax2, ('right',), 18)
+        if transparent:
+            ax2.patch.set_alpha(0.)
+
+    # TICKS
+    major_ticks = ax1.xaxis.get_major_ticks(len(xticks))
+
+    # disable the first and last tick on the x-axis,
+    # they're redundant and ugly (esp if minH > 0)
+    major_ticks[0].tick1On = False
+    major_ticks[-1].tick1On = False
+
+    ## limits, range
+    if mode == 'majority':
+        ### x-ticks
+        ax1.set_xticks(xticks)
+        ### y-ticks
+        ax1.set_ylim((0, 1))
+        ax1.set_yticks(np.arange(0, 1.1, 0.2))
+        # major ticks
+        major_ticks += ax1.yaxis.get_major_ticks()
+        # tick labels
+        ticklabels = (
+            ax1.xaxis.get_ticklabels() +
+            ax1.yaxis.get_ticklabels()
+        )
+    else:
+        ### x-ticks
+        ax2.set_xticks(xticks)
+        ### y-ticks
+        ax1.set_ylim((0, nseq))
+        ax1.set_yticks(yticks)
+        ax2.set_yticks(np.arange(0, 1.1, 0.2))
+        # major ticks
+        major_ticks += ax2.xaxis.get_major_ticks()
+        # tick labels
+        ticklabels = (
+            ax1.xaxis.get_ticklabels() +
+            ax1.yaxis.get_ticklabels() +
+            ax2.xaxis.get_ticklabels() +
+            ax2.yaxis.get_ticklabels()
+        )
+
+    ## remove the major ticks
+    for tick in major_ticks:
+        tick.tick2On = False
+
+    ## set the tick label font
+    for label in ticklabels:
+        label.set_fontproperties(ROBOTO_REGULAR)
+
+    ## width
+    ax1.xaxis.set_tick_params(width=1.0)
+    ax1.yaxis.set_tick_params(width=1.0)
+    if mode != 'majority':
+        ax2.xaxis.set_tick_params(width=1.0)
+        ax2.yaxis.set_tick_params(width=1.0)
+
+    # SPINES
+    ## show max, min value, set visibility
+    ax1.spines['top'].set_visible(False)
+    if mode == 'majority':
+        ax1.spines['left'].set_bounds(min_maj, max_maj)
+        ax1.spines['right'].set_visible(False)
+    else:
+        ax1.spines['left'].set_bounds(min_cov, max_cov)
+        ax2.spines['top'].set_visible(False)
+
+    ## more bounds
+    if mode == 'both':
+        ax1.spines['right'].set_bounds(min_maj, max_maj)
+    if mode == 'coverage':
+        ax1.spines['right'].set_bounds(min_cov, max_cov)
+
+    ## color
+    if mode == 'both':
+        ax1.spines['left'].set_color(LIGHT_BLUE)
+        ax1.spines['right'].set_color(LIGHT_RED)
+
+    # LABELS
+    ## formatter
+    def format_percent(x, pos=None):
+        return '%1.0f%%' % (100 * x)
+
+    if mode == 'majority':
+        ax1.yaxis.set_major_formatter(FuncFormatter(format_percent))
+    else:
+        ax2.yaxis.set_major_formatter(FuncFormatter(format_percent))
+
+    ax1.set_xlabel('Reference sequence position', fontproperties=ROBOTO_REGULAR)
+    ax1.set_xlim((fst_pos + 1, lst_pos))
+
+    if mode == 'majority':
+        ax1.set_ylabel('Majority proportion', fontproperties=ROBOTO_REGULAR)
+    else:
+        ax1.set_ylabel('No. of sequences', fontproperties=ROBOTO_REGULAR)
+        ax2.set_ylabel('Pct. of sequences', rotation=270., fontproperties=ROBOTO_REGULAR)
+
+    # LEGEND
     extra_artists = []
 
     if mode == 'both':
@@ -285,110 +397,6 @@ def graph_coverage_majority(
         )
         leg.legendPatch.set_alpha(0.)
         extra_artists.append(leg)
-    # labels
-        ax1.set_ylabel('No. of sequences', fontproperties=ROBOTO_REGULAR)
-    elif mode == 'coverage':
-        ax1.set_ylabel('Coverage', fontproperties=ROBOTO_REGULAR)
-    elif mode == 'majority':
-        ax1.set_ylabel('Majority proportion', fontproperties=ROBOTO_REGULAR)
-
-    ax1.set_xlabel('Reference sequence position', fontproperties=ROBOTO_REGULAR)
-    ax1.set_xlim((fst_pos + 1, lst_pos))
-
-    major_ticks = ax1.xaxis.get_major_ticks(len(xticks))
-
-    # disable the first and last tick on the x-axis,
-    # they're redundant and ugly (esp if minH > 0)
-    major_ticks[0].tick1On = False
-    major_ticks[-1].tick1On = False
-
-    if mode in ('coverage', 'both'):
-        max_cov, min_cov = _max_nonzero_min(coverages)
-
-    if mode in ('majority', 'both'):
-        max_maj, min_maj = _max_nonzero_min(majorities)
-
-    def format_percent(x, pos=None):
-        return '%1.0f%%' % (100 * x)
-
-    ax1.xaxis.set_tick_params(width=1.0)
-    ax1.yaxis.set_tick_params(width=1.0)
-
-    # if we're only doing coverage, include the number
-    # of sequences, but with majority in the mix
-    # it doesn't make sense
-    if mode == 'majority':
-        # y-ticks
-        ax1.yaxis.set_major_formatter(FuncFormatter(format_percent))
-        ax1.set_yticks(np.arange(0, 1.1, 0.2))
-        ax1.set_ylim((0, 1))
-        # alter axes to show max, min value
-        ax1.spines['left'].set_bounds(min_maj, max_maj)
-        # if we're not showing the # of sequences on the left,
-        # remove the ticks and spine
-        major_ticks += ax1.yaxis.get_major_ticks()
-        ax1.spines['right'].set_visible(False)
-        # x-ticks
-        ax1.set_xticks(xticks)
-        # set font properties
-        ticklabels = (
-            ax1.xaxis.get_ticklabels() +
-            ax1.yaxis.get_ticklabels()
-        )
-    else:
-        # y-ticks
-        ax1.set_yticks(yticks)
-        ax1.set_ylim((0, nseq))
-        # alter axes to show max, min value
-        ax1.spines['left'].set_bounds(min_cov, max_cov)
-        # twin axis
-        ax2 = ax1.twinx()
-        ax2.xaxis.set_tick_params(width=1.0)
-        ax2.yaxis.set_tick_params(width=1.0)
-        # move the axis spines off the data
-        _adjust_spines_outward(ax2, ('right',), 18)
-        ax2.yaxis.set_major_formatter(FuncFormatter(format_percent))
-        ax2.set_yticks(np.arange(0, 1.1, 0.2))
-        # x-ticks
-        ax2.set_xticks(xticks)
-        # set transparent here otherwise ax2 doesn't exist
-        if transparent:
-            ax2.patch.set_alpha(0.)
-        # get the major ticks so we can disable them later
-        major_ticks += ax2.xaxis.get_major_ticks()
-        # disable the top spines, like we do later
-        ax2.spines['top'].set_visible(False)
-        # set font properties
-        ticklabels = (
-            ax1.xaxis.get_ticklabels() +
-            ax1.yaxis.get_ticklabels() +
-            ax2.xaxis.get_ticklabels() +
-            ax2.yaxis.get_ticklabels()
-        )
-
-    if mode == 'both':
-        # use the axes spines to show the maximum value
-        ax1.spines['right'].set_bounds(min_maj, max_maj)
-        # set the colors of the axis spines to correspond to the data
-        ax1.spines['left'].set_color(LIGHT_BLUE)
-        ax1.spines['right'].set_color(LIGHT_RED)
-    elif mode == 'coverage':
-        # use the axes spines to show the maximum value
-        ax1.spines['right'].set_bounds(min_cov, max_cov)
-
-    for label in ticklabels:
-        label.set_fontproperties(ROBOTO_REGULAR)
-
-    if transparent:
-        fig.patch.set_alpha(0.)
-        ax1.patch.set_alpha(0.)
-
-    # remove the upper ticks
-    for tick in major_ticks:
-        tick.tick2On = False
-
-    # remove the upper axis border
-    ax1.spines['top'].set_visible(False)
 
     fig.savefig(
         filename,
