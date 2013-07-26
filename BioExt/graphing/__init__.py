@@ -228,6 +228,7 @@ def graph_coverage_majority(
                 continue
             counts[lmap[l.upper()], i] += 1
 
+    # FIGURE
     fig = plt.figure(figsize=figsize, dpi=dpi)
 
     # golden rectangle!
@@ -241,11 +242,14 @@ def graph_coverage_majority(
         fig.patch.set_alpha(0.)
         ax1.patch.set_alpha(0.)
 
+    # PLOT
     if mode in ('majority', 'both'):
         if mode == 'majority':
             majorities = counts.max(axis=0) / counts.sum(axis=0)
         else:
             majorities = counts.max(axis=0)
+
+        max_maj, min_maj = _max_nonzero_min(majorities)
 
         lines = ax1.plot(
             xs,
@@ -260,6 +264,8 @@ def graph_coverage_majority(
 
     if mode in ('coverage', 'both'):
         coverages = counts.sum(axis=0)
+        max_cov, min_cov = _max_nonzero_min(coverages)
+
         lines = ax1.plot(
             xs,
             coverages,
@@ -270,12 +276,6 @@ def graph_coverage_majority(
 
         for l in lines:
             l.set_clip_on(False)
-
-    if mode in ('coverage', 'both'):
-        max_cov, min_cov = _max_nonzero_min(coverages)
-
-    if mode in ('majority', 'both'):
-        max_maj, min_maj = _max_nonzero_min(majorities)
 
     # AXES
     if mode != 'majority':
@@ -293,6 +293,7 @@ def graph_coverage_majority(
     major_ticks[-1].tick1On = False
 
     ## limits, range
+    ax1.set_xlim((fst_pos + 1, lst_pos))
     if mode == 'majority':
         ### x-ticks
         ax1.set_xticks(xticks)
@@ -370,7 +371,6 @@ def graph_coverage_majority(
         ax2.yaxis.set_major_formatter(FuncFormatter(format_percent))
 
     ax1.set_xlabel('Reference sequence position', fontproperties=ROBOTO_REGULAR)
-    ax1.set_xlim((fst_pos + 1, lst_pos))
 
     if mode == 'majority':
         ax1.set_ylabel('Majority proportion', fontproperties=ROBOTO_REGULAR)
@@ -518,8 +518,7 @@ def graph_logo(
             heights[i, j] = h if h >= cutoff else 0
             identities[i, j] = k
 
-    font = Basefont(join(FONT_PATH, 'Roboto-Black.ttf'))
-
+    # FIGURE
     fig = plt.figure(figsize=figsize, dpi=dpi)
 
     # make each column a vertical golden rect
@@ -528,8 +527,6 @@ def graph_logo(
 
     _adjust_spines_outward(ax, ('left',), 9)
 
-    ax.set_ylabel('bits', fontproperties=ROBOTO_REGULAR)
-
     if figsize is None:
         fig.set_figwidth(N)
 
@@ -537,49 +534,8 @@ def graph_logo(
         fig.patch.set_alpha(0.)
         ax.patch.set_alpha(0.)
 
-    # remove the top and right ticks
-    for tick in ax.xaxis.get_major_ticks() + ax.yaxis.get_major_ticks():
-        tick.tick2On = False
-
-    # remove the bottom ticks
-    for tick in ax.xaxis.get_major_ticks():
-        tick.tick1On = False
-
-    # rotate the x-axis labels by 45 degrees to enhance packing
-    for label in ax.xaxis.get_ticklabels():
-        label.set_rotation(45)
-
-    # set font properties
-    for label in ax.xaxis.get_ticklabels() + ax.yaxis.get_ticklabels():
-        label.set_fontproperties(ROBOTO_REGULAR)
-
-    # disable top and right spines, we don't need them
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-    def format_xlabel(x, pos=None):
-        idx = np.clip(int(x) - 1, 0, N - 1)
-        return labels[idx]
-
-    ax.xaxis.set_major_formatter(FuncFormatter(format_xlabel))
-    # avoid too much precision
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%1.1f'))
-
-    # set the ticks
-    ysep = 0.5 if s < 20 else 1.0
-    yticks = np.arange(0, maxbits, ysep, dtype=float)
-    if maxbits - yticks[-1] < ysep:
-        yticks[-1] = maxbits
-    else:
-        yticks = np.append(yticks, maxbits)
-    ax.set_yticks(yticks)
-    ax.set_xticks(np.arange(1, N + 1, dtype=float) + 0.5)
-
-    # set the axes limits here AFTER the ticks, otherwise borkage
-    ax.set_xlim((1, N + 1))
-    ax.set_ylim((0, maxbits))
-
+    # DRAW
+    font = Basefont(join(FONT_PATH, 'Roboto-Black.ttf'))
     idxs = np.arange(1, N + 1)
     bottoms = np.zeros((N,), dtype=float)
     for i in range(s):
@@ -597,12 +553,60 @@ def graph_logo(
                 glyph.set_zorder(-1)
             bar.set_visible(False)
 
-    # set the remaining spine to show the maximum value
-    ax.spines['left'].set_bounds(0, max(bottoms))
+    # TICKS
+    ## set the ticks
+    ysep = 0.5 if s < 20 else 1.0
+    yticks = np.arange(0, maxbits, ysep, dtype=float)
+    if maxbits - yticks[-1] < ysep:
+        yticks[-1] = maxbits
+    else:
+        yticks = np.append(yticks, maxbits)
+    ax.set_yticks(yticks)
+    ax.set_xticks(np.arange(1, N + 1, dtype=float) + 0.5)
 
-    # make these uniform
+    ## set the axes limits here AFTER the ticks, otherwise borkage
+    ax.set_xlim((1, N + 1))
+    ax.set_ylim((0, maxbits))
+
+    ## remove the top and right ticks
+    for tick in ax.xaxis.get_major_ticks() + ax.yaxis.get_major_ticks():
+        tick.tick2On = False
+
+    ## remove the bottom ticks
+    for tick in ax.xaxis.get_major_ticks():
+        tick.tick1On = False
+
+    ## rotate the x-axis tick labels by 45 degrees to enhance packing
+    for label in ax.xaxis.get_ticklabels():
+        label.set_rotation(45)
+
+    ## set tick label font
+    for label in ax.xaxis.get_ticklabels() + ax.yaxis.get_ticklabels():
+        label.set_fontproperties(ROBOTO_REGULAR)
+
+    ## make tick width uniform
     ax.xaxis.set_tick_params(width=1.0)
     ax.yaxis.set_tick_params(width=1.0)
+
+    # SPINES
+    ## disable top and right spines, we don't need them
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    ## set the remaining spine to show the maximum value
+    ax.spines['left'].set_bounds(0, max(bottoms))
+
+    # LABELS
+    ## formatters
+    def format_xlabel(x, pos=None):
+        idx = np.clip(int(x) - 1, 0, N - 1)
+        return labels[idx]
+
+    ax.xaxis.set_major_formatter(FuncFormatter(format_xlabel))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%1.1f'))
+
+    ax.set_ylabel('bits', fontproperties=ROBOTO_REGULAR)
 
     fig.savefig(
         filename, format=format, transparent=transparent,
