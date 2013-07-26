@@ -6,9 +6,9 @@ import sys
 
 from argparse import ArgumentParser, ArgumentTypeError, FileType
 
-from Bio import AlignIO
+import matplotlib as mpl
 
-from BioExt.graphing import graph_logo
+from Bio import AlignIO
 
 
 def csvtype(string):
@@ -33,9 +33,26 @@ def spectype(string):
         raise ArgumentTypeError(msg)
 
 
-def main(infile, colspec, filename, labels, refidx):
+def main(infile, colspec, filename, format, labels, refidx):
     msa = AlignIO.read(infile, 'fasta')
-    graph_logo(msa, colspec, filename, format='pdf', labels=labels, refidx=refidx)
+
+    if format == 'pdf':
+        mpl.use('pdf')
+    elif format == 'png':
+        mpl.use('agg')
+
+    # this has to be done after setting use() above
+    from BioExt.graphing import graph_logo
+
+    graph_logo(
+        msa,
+        colspec,
+        filename,
+        format=format,
+        labels=labels,
+        refidx=refidx
+        )
+
     return 0
 
 
@@ -65,11 +82,16 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         'output',
-        metavar='PDF',
+        metavar='OUTPUT',
         type=FileType('w'),
         default=sys.stdout,
-        help='output PDF file'
+        help='output file'
     )
+    parser.add_argument(
+        '-f', '--format',
+        choices=('pdf', 'png'), default='pdf',
+        help='output format'
+        )
     parser.add_argument(
         '-r', '--refidx',
         type=int, default=None,
@@ -86,7 +108,7 @@ if __name__ == '__main__':
         if ns.refidx is not None:
             ns.refidx -= 1
 
-        retcode = main(ns.input, ns.colspec, filename, ns.labels, ns.refidx)
+        retcode = main(ns.input, ns.colspec, filename, ns.format, ns.labels, ns.refidx)
     finally:
         if ns is not None:
             if ns.input not in (None, sys.stdin):

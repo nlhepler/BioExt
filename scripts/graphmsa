@@ -6,20 +6,28 @@ import sys
 
 from argparse import ArgumentParser, FileType
 
+import matplotlib as mpl
+
 from Bio import AlignIO
 
-from BioExt.graphing import graph_coverage_majority
 
-
-def main(infile, mode, nseq, outfile, refidx):
+def main(infile, mode, nseq, outfile, format, refidx):
     msa = AlignIO.read(infile, 'fasta')
+
+    if format == 'pdf':
+        mpl.use('pdf')
+    elif format == 'png':
+        mpl.use('agg')
+
+    # this has to be done after setting use() above
+    from BioExt.graphing import graph_coverage_majority
 
     graph_coverage_majority(
         msa,
         mode,
         nseq,
         outfile,
-        format='pdf',
+        format=format,
         refidx=refidx
     )
 
@@ -38,8 +46,13 @@ if __name__ == '__main__':
         )
     parser.add_argument(
         'output',
-        metavar='PDF',
-        help='output PDF file'
+        metavar='OUTPUT',
+        help='output file'
+        )
+    parser.add_argument(
+        '-f', '--format',
+        choices=('pdf', 'png'), default='pdf',
+        help='output format'
         )
     parser.add_argument(
         '-m', '--mode',
@@ -66,7 +79,7 @@ if __name__ == '__main__':
         if ns.refidx is not None:
             ns.refidx -= 1
 
-        retcode = main(ns.input, ns.mode, ns.nseq, ns.output, ns.refidx)
+        retcode = main(ns.input, ns.mode, ns.nseq, ns.output, ns.format, ns.refidx)
     finally:
         if ns is not None:
             if not ns.input in (None, sys.stdin):
