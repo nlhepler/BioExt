@@ -276,7 +276,7 @@ def graph_coverage_majority(
         p2 = Line2D([0, 1], [0, 1], color=LIGHT_RED, linewidth=1.0)
         leg = ax1.legend(
             [p1, p2],
-            ['Coverage', 'Majority proportion'],
+            ['Coverage', 'Majority'],
             bbox_to_anchor=(0.5, -0.15),
             loc=9,
             ncol=2,
