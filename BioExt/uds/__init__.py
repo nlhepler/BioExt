@@ -109,6 +109,7 @@ def _align_par(
     else:
         def delayed_(i, fn):
             print('\rdispatched: {0:9d} reads'.format(i), end='', file=stderr)
+            stderr.flush()
             return delayed(fn)
 
     rv = output(
