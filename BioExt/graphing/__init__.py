@@ -592,6 +592,10 @@ def graph_logo(
     # set the remaining spine to show the maximum value
     ax.spines['left'].set_bounds(0, max(bottoms))
 
+    # make these uniform
+    ax.xaxis.set_tick_params(width=1.0)
+    ax.yaxis.set_tick_params(width=1.0)
+
     fig.savefig(
         filename, format=format, transparent=transparent,
         bbox_inches='tight', pad_inches=0.25
