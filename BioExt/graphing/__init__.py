@@ -25,6 +25,7 @@ from Bio.Alphabet.IUPAC import (
 
 from matplotlib.font_manager import FontProperties
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 from matplotlib.ticker import (
     FormatStrFormatter,
     FuncFormatter
@@ -36,7 +37,8 @@ from BioExt.misc import _GAP, _STOP
 
 __all__ = [
     'graph_coverage_majority',
-    'graph_logo'
+    'graph_logo',
+    'graph_readlength_histogram'
     ]
 
 
@@ -113,7 +115,7 @@ def graph_coverage_majority(
     mode,
     nseq=None,
     filename=None,
-    dpi=None, figsize=None, format='pdf', transparent=True,
+    dpi=None, figsize=(6, 6), format='pdf', transparent=True,
     refidx=None
 ):
     if not mode:
@@ -125,11 +127,6 @@ def graph_coverage_majority(
     if filename is None:
         fd, filename = mkstemp()
         close(fd)
-
-    if figsize is None:
-        # actually results in a graph that is almost 4" high
-        # and 6.4" wide -- almost the golden ratio
-        figsize = (6, 6)
 
     if refidx is not None:
         msa = alignment
@@ -199,7 +196,7 @@ def graph_coverage_majority(
     ax1 = fig.add_axes(rect)
 
     # move the axis spines off the data
-    _adjust_spines_outward(ax1, ('left', 'right'), 18)
+    _adjust_spines_outward(ax1, ('left', 'right'), 3 * figsize[0])
 
     if transparent:
         fig.patch.set_alpha(0.)
@@ -243,7 +240,7 @@ def graph_coverage_majority(
     # AXES
     if mode != 'majority':
         ax2 = ax1.twinx()
-        _adjust_spines_outward(ax2, ('right',), 18)
+        _adjust_spines_outward(ax2, ('right',), 3 * figsize[0])
         if transparent:
             ax2.patch.set_alpha(0.)
 
@@ -381,8 +378,8 @@ def graph_coverage_majority(
     if mode == 'majority':
         ax1.set_ylabel('Majority proportion', fontproperties=ROBOTO_REGULAR)
     else:
-        ax1.set_ylabel('No. of sequences', fontproperties=ROBOTO_REGULAR)
-        ax2.set_ylabel('Pct. of sequences', rotation=270., fontproperties=ROBOTO_REGULAR)
+        ax1.set_ylabel('No. of reads', fontproperties=ROBOTO_REGULAR)
+        ax2.set_ylabel('Pct. of reads', rotation=270., fontproperties=ROBOTO_REGULAR)
 
     # LEGEND
     extra_artists = []
@@ -425,7 +422,7 @@ def graph_logo(
     alignment,
     columns,
     filename=None,
-    dpi=None, edgecolor='k', figsize=None, format='pdf',
+    dpi=None, edgecolor='k', figsize=(3, 3), format='pdf',
     labels=None, linewidth=0., transparent=True,
     refidx=None,
     cutoff=1e-2
@@ -433,9 +430,6 @@ def graph_logo(
     if filename is None:
         fd, filename = mkstemp()
         close(fd)
-
-    if figsize is None:
-        figsize = (3, 3)
 
     if labels is None:
         labels = ['%d' % (idx + 1) for idx in columns]
@@ -531,7 +525,7 @@ def graph_logo(
     rect = 0.2, 0.2, 0.382 * N, 0.618
     ax = fig.add_axes(rect)
 
-    _adjust_spines_outward(ax, ('left',), 9)
+    _adjust_spines_outward(ax, ('left',), 3 * figsize[0])
 
     if figsize is None:
         fig.set_figwidth(N)
@@ -620,5 +614,111 @@ def graph_logo(
         filename, format=format, transparent=transparent,
         bbox_inches='tight', pad_inches=0.25
         )
+
+    return filename
+
+
+def graph_readlength_histogram(
+        lengths,
+        filename=None,
+        bins=50, rwidth=0.9,
+        dpi=None, figsize=(6, 6), format='pdf', transparent=True
+        ):
+
+    if filename is None:
+        fd, filename = mkstemp()
+        close(fd)
+
+    # FIGURE
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+
+    rect = 0.2, 0.2, 1, 0.618
+    ax = fig.add_axes(rect)
+
+    _adjust_spines_outward(ax, ('left',), 3 * figsize[0])
+
+    if transparent:
+        fig.patch.set_alpha(0.)
+        ax.patch.set_alpha(0.)
+
+    n, bins, patches = ax.hist(
+        lengths,
+        bins=bins,
+        rwidth=rwidth,
+        color=LIGHT_BLUE,
+        linewidth=0.
+        )
+
+    mean = np.mean(lengths)
+    median = np.median(lengths)
+
+    for i, upr in enumerate(bins[1:]):
+        if upr > mean:
+            patches[i].set_color(LIGHT_RED)
+            mean = float('Inf')
+        if upr > median:
+            patches[i].set_color(LIGHT_GREEN)
+            median = float('Inf')
+
+    # TICKS
+    xlwr, xupr = (int(v) for v in ax.get_xlim())
+    ax.set_xticks(range(xlwr, xupr + 1, (xupr - xlwr) // 5))
+
+    ylwr, yupr = (int(v) for v in ax.get_ylim())
+    ax.set_yticks(range(ylwr, yupr + 1, (yupr - ylwr) // 5))
+
+    major_ticks = ax.xaxis.get_major_ticks()
+
+    ## disable the first and last tick on the x-axis,
+    ## they're redundant and ugly (esp if minH > 0)
+    major_ticks[0].tick1On = False
+    major_ticks[-1].tick1On = False
+
+    ## remove the top and right ticks
+    for tick in major_ticks + ax.yaxis.get_major_ticks():
+        tick.tick2On = False
+
+    ## set tick label font
+    for label in ax.xaxis.get_ticklabels() + ax.yaxis.get_ticklabels():
+        label.set_fontproperties(ROBOTO_REGULAR)
+
+    ## make tick width uniform
+    ax.xaxis.set_tick_params(width=1.0)
+    ax.yaxis.set_tick_params(width=1.0)
+
+    # SPINES
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    # LABELS
+    ax.set_xlabel('Read length', fontproperties=ROBOTO_REGULAR)
+    ax.set_ylabel('No. of reads', fontproperties=ROBOTO_REGULAR)
+
+    # LEGEND
+    extra_artists = []
+
+    p1 = Patch(color=LIGHT_RED, linewidth=0.)
+    p2 = Patch(color=LIGHT_GREEN, linewidth=0.)
+    leg = ax.legend(
+        [p1, p2],
+        ['Mean', 'Median'],
+        bbox_to_anchor=(0.5, -0.15),
+        loc=9,
+        ncol=2,
+        prop=ROBOTO_REGULAR,
+        borderpad=0
+    )
+
+    leg.legendPatch.set_alpha(0.)
+    extra_artists.append(leg)
+
+    fig.savefig(
+        filename,
+        format=format,
+        transparent=transparent,
+        bbox_extra_artists=extra_artists,
+        bbox_inches='tight',
+        pad_inches=0.25
+    )
 
     return filename

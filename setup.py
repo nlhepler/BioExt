@@ -118,9 +118,8 @@ setup(
         'scripts/bam2msa',
         'scripts/bamclip',
         'scripts/bealign',
-        'scripts/graphmsa',
+        'scripts/begraph',
         'scripts/consensus',
-        'scripts/seqlogo',
         'scripts/translate'
         # 'scripts/variants'
         ],
