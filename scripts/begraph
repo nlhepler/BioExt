@@ -104,6 +104,7 @@ if __name__ == '__main__':
     parser = ArgumentParser(
         description='graph various aspects of sequencing data'
         )
+
     subparsers = parser.add_subparsers(dest='cmd')
 
     parser_msa = subparsers.add_parser(
