@@ -110,6 +110,139 @@ def _max_nonzero_min(values, default=0):
     return vmax, vmin
 
 
+def _magic_ticks(lwr, upr, div=5):
+    # some heuristic to prevent too many ticks,
+    # is complicated by the start and end dynamically business
+    # 0.477122 jumps an order 10 at 30% of the next order 10
+    magic = 0.477122
+
+#     div2 = 10 ** int(np.log10(upr - lwr) - magic) or 1
+#     sep = div2 * int(upr / div / div2 + 1)
+#     ticks = np.arange(lwr, upr + sep, sep)
+#
+#     if len(ticks) > 1:
+#         if upr - ticks[-2] < sep / 4:
+#             ticks = np.arange(lwr, upr, sep)
+#
+#     ticks[-1] = upr
+
+    rng = upr - lwr
+    div2 = 10 ** int(np.log10(rng) - magic) or 1
+    sep = div2 * int(rng / div / div2 + 1)
+    start = (lwr // sep) * sep
+    end = upr + sep
+    ticks = np.arange(start, end, sep)
+
+    # prevent the first two and last two ticks from being too close
+    if len(ticks) > 1:
+        fix = False
+        min_delta = sep / 4
+        delta = ticks[1] - lwr
+        if delta and delta < min_delta:
+            start += sep
+            fix = True
+        delta = upr - ticks[-2]
+        if delta and delta < min_delta:
+            end -= sep
+            fix = True
+        if fix:
+            ticks = np.arange(start, end, sep)
+
+    ## first and last tick
+    ticks[0] = lwr
+    ticks[-1] = upr
+
+    return ticks
+
+
+def count_alignment(alignment, columns='all', refidx=None, limit=100):
+    records = []
+
+    if columns is None or columns == 'all':
+        r = next(iter(alignment))
+        columns = list(range(len(r)))
+        records.append((0, r))
+
+    N = len(columns)
+
+    for i, r in enumerate(alignment, start=len(records)):
+        if len(records) > limit:
+            break
+        if i == refidx:
+            continue
+        records.append((i, r))
+
+    alph = None
+    for alph_ in (DNA_ALPHABET, RNA_ALPHABET, AMINO_ALPHABET):
+        for _, r in records:
+            r.seq.alphabet = alph_
+        if all(_verify_alphabet(r.seq.upper()) for _, r in records):
+            alph = alph_
+            break
+
+    if alph is None:
+        raise RuntimeError('unknown alphabet')
+
+    skips = _GAP
+    if alph in (DNA_ALPHABET, RNA_ALPHABET):
+        T = 'T' if alph == DNA_ALPHABET else 'U'
+        letters = 'ACG' + T
+        ambigs = {
+            'M': 'AC',
+            'R': 'AG',
+            'W': 'A' + T,
+            'S': 'CG',
+            'Y': 'C' + T,
+            'K': 'G' + T,
+            'V': 'ACG',
+            'H': 'AC' + T,
+            'D': 'AG' + T,
+            'B': 'CG' + T,
+        }
+        skips += 'N'
+        colors = DNA_COLORS
+    elif alph == AMINO_ALPHABET:
+        letters = 'ACDEFGHIKLMNPQRSTVWY'
+        ambigs = {
+            'B': 'DN',
+            'J': 'IL',
+            'Z': 'EQ',
+        }
+        skips += _STOP + 'X' + 'OU'
+        colors = AMINO_COLORS
+    else:
+        raise RuntimeError("sequences with indeterminable alphabet provided")
+
+    s = len(letters)
+    counts = np.zeros((s, N), dtype=float)
+
+    def allrecords():
+        for i, r in records:
+            yield r
+        for i, r in enumerate(alignment, start=i):
+            if i == refidx:
+                continue
+            yield r
+
+    for r in allrecords():
+        for j, c in enumerate(columns):
+            ltr = r[c].upper()
+            if ltr in skips:
+                continue
+            elif ltr in ambigs:
+                frac = 1 / len(ambigs[ltr])
+                for ltr_ in ambigs[ltr]:
+                    i = letters.index(ltr_)
+                    counts[i, j] += frac
+            elif ltr in letters:
+                i = letters.index(ltr)
+                counts[i, j] += 1
+            else:
+                raise ValueError('unknown letter: {0}'.format(ltr))
+
+    return counts, (letters, colors)
+
+
 def graph_coverage_majority(
     alignment,
     mode,
@@ -128,65 +261,14 @@ def graph_coverage_majority(
         fd, filename = mkstemp()
         close(fd)
 
-    if refidx is not None:
-        msa = alignment
-        alignment = msa[:refidx]
-        alignment.extend(msa[refidx + 1:])
-        del msa
-
     if nseq is None:
         nseq = len(alignment)
+        if refidx is not None:
+            nseq -= 1
 
-    fst_pos = 0
-    lst_pos = alignment.get_alignment_length()
-
-    # if we don't match the whole reference,
-    # cut off the head, tail of gaps
-    if False:  # strip:
-        leading = re_compile(r'^-*')
-        trailing = re_compile(r'-*$')
-        l = None
-        t = None
-        for r in alignment:
-            seq = str(r.seq)
-            # *ing.search should always match
-            l_ = len(leading.search(seq).group(0))
-            t_ = len(trailing.search(seq).group(0))
-            if l is None or l_ < l:
-                l = l_
-            if t is None or t_ < t:
-                t = t_
-        # if we're greater than 0, remove leading, trailing gaps
-        if l:
-            fst_pos += l
-        if t:
-            lst_pos -= t
-
-    npos = lst_pos - fst_pos
+    counts, _ = count_alignment(alignment, refidx=refidx)
+    fst_pos, lst_pos = 0, counts.shape[1]
     xs = np.arange(fst_pos, lst_pos) + 1
-
-    alph = set([])
-    for seq in alignment:
-        alph.update(ltr.upper() for ltr in seq[fst_pos:lst_pos])
-
-    lmap = dict(
-        (ltr, idx)
-        for idx, ltr
-        in enumerate(
-            ltr_
-            for ltr_
-            in sorted(alph)
-            if ltr_ != _GAP
-            )
-        )
-
-    counts = np.zeros((len(lmap), npos), dtype=int)
-
-    for seq in alignment:
-        for i, l in enumerate(seq[fst_pos:lst_pos]):
-            if l == _GAP:
-                continue
-            counts[lmap[l.upper()], i] += 1
 
     # FIGURE
     fig = plt.figure(figsize=figsize, dpi=dpi)
@@ -246,33 +328,7 @@ def graph_coverage_majority(
 
     # TICKS
     ## compute the x-ticks
-    ### some heuristic to prevent too many ticks,
-    ### is complicated by the start and end dynamically business
-    ### 0.477122 jumps an order 10 at 30% of the next order 10
-    magic = 0.477122
-    xdiv = 10 ** int(np.log10(lst_pos) - magic) or 1
-    xsep = xdiv * int(npos / 5 / xdiv + 1)
-    xstart = (fst_pos // xsep) * xsep
-    xend = lst_pos + xsep
-    xticks = np.arange(xstart, xend, xsep)
-    ### prevent the first two and last two ticks from being too close
-    if len(xticks) > 1:
-        fix = False
-        min_delta = xsep / 4
-        delta = xticks[1] - fst_pos
-        if delta and delta < min_delta:
-            xstart += xsep
-            fix = True
-        delta = lst_pos - xticks[-2]
-        if delta and delta < min_delta:
-            xend -= xsep
-            fix = True
-        if fix:
-            xticks = np.arange(xstart, xend, xsep)
-
-    ## first and last tick
-    xticks[0] = fst_pos + 1
-    xticks[-1] = lst_pos
+    xticks = _magic_ticks(fst_pos + 1, lst_pos)
 
     ## set the x-ticks
     ax1.set_xlim((fst_pos + 1, lst_pos))
@@ -289,16 +345,7 @@ def graph_coverage_majority(
     major_ticks[-1].tick1On = False
 
     ## compute the y-ticks
-    ydiv = 10 ** int(np.log10(nseq) - magic) or 1
-    ysep = ydiv * int(nseq / 5 / ydiv + 1)
-    yticks = np.arange(0, nseq + ysep, ysep)
-
-    if len(yticks) > 1:
-        if nseq - yticks[-2] < ysep / 4:
-            yticks = np.arange(0, nseq, ysep)
-
-    ## last tick
-    yticks[-1] = nseq
+    yticks = _magic_ticks(0, nseq)
 
     ## set the y-ticks, limits, range
     if mode == 'majority':
@@ -434,72 +481,10 @@ def graph_logo(
     if labels is None:
         labels = ['%d' % (idx + 1) for idx in columns]
 
-    if refidx is not None:
-        msa = alignment
-        alignment = msa[:refidx]
-        alignment.extend(msa[refidx + 1:])
-        del msa
-
     N = len(columns)
-
-    alph = None
-    for alph_ in (DNA_ALPHABET, RNA_ALPHABET, AMINO_ALPHABET):
-        for r in alignment:
-            r.seq.alphabet = alph_
-        if all([_verify_alphabet(r.seq.upper()) for r in alignment]):
-            alph = alph_
-            break
-
-    skips = _GAP
-    if alph in (DNA_ALPHABET, RNA_ALPHABET):
-        T = 'T' if alph == DNA_ALPHABET else 'U'
-        letters = 'ACG' + T
-        ambigs = {
-            'M': 'AC',
-            'R': 'AG',
-            'W': 'A' + T,
-            'S': 'CG',
-            'Y': 'C' + T,
-            'K': 'G' + T,
-            'V': 'ACG',
-            'H': 'AC' + T,
-            'D': 'AG' + T,
-            'B': 'CG' + T,
-        }
-        skips += 'N'
-        colors = DNA_COLORS
-    elif alph == AMINO_ALPHABET:
-        letters = 'ACDEFGHIKLMNPQRSTVWY'
-        ambigs = {
-            'B': 'DN',
-            'J': 'IL',
-            'Z': 'EQ',
-        }
-        skips += _STOP + 'X' + 'OU'
-        colors = AMINO_COLORS
-    else:
-        raise RuntimeError("sequences with indeterminable alphabet provided")
-
-    s = len(letters)
-    counts = np.zeros((s, N), dtype=float)
-
-    for r in alignment:
-        for j, c in enumerate(columns):
-            ltr = r[c].upper()
-            if ltr in skips:
-                continue
-            elif ltr in ambigs:
-                frac = 1 / len(ambigs[ltr])
-                for ltr_ in ambigs[ltr]:
-                    i = letters.index(ltr_)
-                    counts[i, j] += frac
-            elif ltr in letters:
-                i = letters.index(ltr)
-                counts[i, j] += 1
-            else:
-                raise ValueError('unknown letter: {0}'.format(ltr))
-
+    counts, (letters, colors) = count_alignment(alignment, columns)
     pwm = counts / counts.sum(axis=0)
+    s = len(letters)
 
     # compute the information content at each position
     maxbits = np.log2(s)
@@ -621,7 +606,7 @@ def graph_logo(
 def graph_readlength_histogram(
         lengths,
         filename=None,
-        bins=50, rwidth=0.9,
+        bins=50, mean_median=False, rwidth=0.9,
         dpi=None, figsize=(6, 6), format='pdf', transparent=True
         ):
 
@@ -649,23 +634,30 @@ def graph_readlength_histogram(
         linewidth=0.
         )
 
-    mean = np.mean(lengths)
-    median = np.median(lengths)
+    if mean_median:
+        mean = np.mean(lengths)
+        median = np.median(lengths)
 
-    for i, upr in enumerate(bins[1:]):
-        if upr > mean:
-            patches[i].set_color(LIGHT_RED)
-            mean = float('Inf')
-        if upr > median:
-            patches[i].set_color(LIGHT_GREEN)
-            median = float('Inf')
+        for i, upr in enumerate(bins[1:]):
+            if upr > mean:
+                patches[i].set_color(LIGHT_RED)
+                mean = float('Inf')
+            if upr > median:
+                patches[i].set_color(LIGHT_GREEN)
+                median = float('Inf')
 
     # TICKS
     xlwr, xupr = (int(v) for v in ax.get_xlim())
-    ax.set_xticks(range(xlwr, xupr + 1, (xupr - xlwr) // 5))
-
     ylwr, yupr = (int(v) for v in ax.get_ylim())
-    ax.set_yticks(range(ylwr, yupr + 1, (yupr - ylwr) // 5))
+
+    xticks = _magic_ticks(xlwr, xupr)
+    yticks = _magic_ticks(ylwr, yupr)
+
+    ax.set_xticks(xticks)
+    ax.set_yticks(yticks)
+
+    ax.set_xlim((xticks[0], xticks[-1]))
+    ax.set_ylim((yticks[0], yticks[-1]))
 
     major_ticks = ax.xaxis.get_major_ticks()
 
@@ -697,20 +689,21 @@ def graph_readlength_histogram(
     # LEGEND
     extra_artists = []
 
-    p1 = Patch(color=LIGHT_RED, linewidth=0.)
-    p2 = Patch(color=LIGHT_GREEN, linewidth=0.)
-    leg = ax.legend(
-        [p1, p2],
-        ['Mean', 'Median'],
-        bbox_to_anchor=(0.5, -0.15),
-        loc=9,
-        ncol=2,
-        prop=ROBOTO_REGULAR,
-        borderpad=0
-    )
+    if mean_median:
+        p1 = Patch(color=LIGHT_RED, linewidth=0.)
+        p2 = Patch(color=LIGHT_GREEN, linewidth=0.)
+        leg = ax.legend(
+            [p1, p2],
+            ['Mean', 'Median'],
+            bbox_to_anchor=(0.5, -0.15),
+            loc=9,
+            ncol=2,
+            prop=ROBOTO_REGULAR,
+            borderpad=0
+        )
 
-    leg.legendPatch.set_alpha(0.)
-    extra_artists.append(leg)
+        leg.legendPatch.set_alpha(0.)
+        extra_artists.append(leg)
 
     fig.savefig(
         filename,

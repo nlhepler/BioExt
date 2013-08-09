@@ -35,13 +35,19 @@ def spectype(string):
 
 def main(
         infile, mode, outfile, format, refidx,
-        nseq=None, colspec=None, labels=None
+        bins=None, mean_median=True,
+        colspec=None, labels=None,
+        nseq=None
         ):
     # set these before loading graphing from BioExt, otherwise warnings everywhere
     if format == 'pdf':
         mpl.use('pdf')
     elif format == 'png':
         mpl.use('agg')
+    elif format == 'svg':
+        mpl.use('svg')
+    else:
+        raise ValueError('invalid format: {0}'.format(format))
 
     if mode == 'histogram':
         from BioExt.graphing import graph_readlength_histogram
@@ -55,6 +61,8 @@ def main(
 
         graph_readlength_histogram(
             lengths,
+            bins=bins,
+            mean_median=mean_median,
             filename=outfile,
             format=format
             )
@@ -150,9 +158,20 @@ if __name__ == '__main__':
         help='OUTPUT file'
         )
     parser_hist.add_argument(
+        '-b', '--bins',
+        type=int, default=50,
+        help='number of bins in the histogram'
+        )
+    parser_hist.add_argument(
         '-f', '--format',
         choices=('pdf', 'png'), default='pdf',
         help='output format'
+        )
+    parser_hist.add_argument(
+        '-m', '--mean-median',
+        dest='mean_median',
+        action='store_true',
+        help='colorize mean and median in the histogram'
         )
     parser_hist.add_argument(
         '-r', '--refidx',
@@ -211,7 +230,9 @@ if __name__ == '__main__':
                 ns.input, ns.mode, ns.output, ns.format, ns.refidx,
                 nseq=ns.nseq)
         elif ns.cmd == 'hist':
-            retcode = main(ns.input, 'histogram', ns.output, ns.format, ns.refidx)
+            retcode = main(
+                ns.input, 'histogram', ns.output, ns.format, ns.refidx,
+                bins=ns.bins, mean_median=ns.mean_median)
         elif ns.cmd == 'seqlogo':
             retcode = main(
                 ns.input, 'seqlogo', ns.output, ns.format, ns.refidx,

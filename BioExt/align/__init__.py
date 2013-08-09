@@ -11,37 +11,42 @@ import numpy as np
 from Bio.Seq import Seq, translate as _translate
 from Bio.SeqRecord import SeqRecord
 
-from BioExt.aligner._align import _align, _compute_codon_matrices
+from BioExt.align._align import _align, _compute_codon_matrices
 from BioExt.misc import gapless
-from BioExt.scorematrix import ProteinScoreMatrix as _ProteinScoreMatrix
+from BioExt.scorematrices import ProteinScoreMatrix as _ProteinScoreMatrix
 
 
 __all__ = ['Aligner']
 
 
-def _protein_to_codon(protein_matrix, non_identity_penalty=0.5):
+def _protein_to_codon(protein_matrix, non_identity_penalty=None):
+    from BioExt.scorematrices._scorematrix import dletters
     codon_matrix = np.ones((64, 64), dtype=float) * -1e4
-    dletters = 'ACGT'
     pletters = protein_matrix.letters
     mapping = defaultdict(list)
+    stops = set()
     for i in range(4):
         for j in range(4):
             for k in range(4):
                 cdn = ''.join(dletters[l] for l in (i, j, k))
-                aa = pletters.index(_translate(cdn))
-                # if it's a stop codon, leave it at -1e4
-#                 if aa == '*':
-#                     continue
-                mapping[aa].append(16 * i + 4 * j + k)
+                aa = _translate(cdn)
+                idx = pletters.index(aa)
+                if aa == '*':
+                    stops.add(idx)
+                mapping[idx].append(16 * i + 4 * j + k)
     protein_matrix_ = protein_matrix.tondarray()
     M, N = protein_matrix_.shape
     for i in range(M):
         for k in mapping[i]:
             for j in range(N):
                 for l in mapping[j]:
-                    codon_matrix[k, l] = protein_matrix_[i, j]
-                    if k != l and non_identity_penalty:
-                        codon_matrix[k, l] -= non_identity_penalty
+                    # penalize transitions to stop codons
+                    if i != j and (i in stops or j in stops):
+                        pass
+                    else:
+                        codon_matrix[k, l] = protein_matrix_[i, j]
+                        if k != l and non_identity_penalty:
+                            codon_matrix[k, l] -= non_identity_penalty
     return dletters, codon_matrix
 
 
@@ -88,18 +93,18 @@ class Aligner:
             raise ValueError('codon alignment requires a protein score matrix')
 
         if do_codon:
-            letters, score_matrix_ = _protein_to_codon(score_matrix, 0.5)
+            letters, score_matrix_ = _protein_to_codon(score_matrix)
         else:
             letters = score_matrix.letters
             score_matrix_ = score_matrix.tondarray()
 
         # set the default extension cost to 7.5% of the range
         magic = 40 / 3  # magic denominator for 7.5%
-        ext_cost = (score_matrix_.max() - score_matrix_.min()) / magic
+        ext_cost = (score_matrix.max() - score_matrix.min()) / magic
         # we take the negation of the minimum,
         # because the implementation assumes these values are penalties,
         # and subtracts them in all places
-        min_score = -score_matrix_.min()
+        min_score = -score_matrix.min()
 
         # sane defaults for various penalties
         if open_insertion is None:

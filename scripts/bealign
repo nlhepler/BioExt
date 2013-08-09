@@ -8,7 +8,7 @@ from Bio import SeqIO
 
 from BioExt.io import BamIO
 from BioExt.misc import compute_cigar, gapless
-from BioExt.scorematrix import FrequenciesError
+from BioExt.scorematrices import FrequenciesError
 from BioExt.uds import _align_par
 
 
@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
     from BioExt.references import hxb2, nl4_3
 
-    import BioExt.scorematrix
+    import BioExt.scorematrices
 
     references = {
         'HXB2_env': hxb2.env,
@@ -113,13 +113,13 @@ if __name__ == '__main__':
 
     protein_score_matrices = {}
     dna_score_matrices = {}
-    for sm in dir(BioExt.scorematrix):
-        sm_ = getattr(BioExt.scorematrix, sm)
+    for sm in dir(BioExt.scorematrices):
+        sm_ = getattr(BioExt.scorematrices, sm)
         try:
             sm_ = sm_.load()
-            if isinstance(sm_, BioExt.scorematrix.DNAScoreMatrix):
+            if isinstance(sm_, BioExt.scorematrices.DNAScoreMatrix):
                 dna_score_matrices[sm] = sm_
-            elif isinstance(sm_, BioExt.scorematrix.ProteinScoreMatrix):
+            elif isinstance(sm_, BioExt.scorematrices.ProteinScoreMatrix):
                 protein_score_matrices[sm] = sm_
         except (AttributeError, TypeError):
             continue

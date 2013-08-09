@@ -1,8 +1,8 @@
 
 from __future__ import division, print_function
 
-from BioExt.scorematrix import HIV_BETWEEN_F
-from BioExt.aligner import Aligner
+from BioExt.scorematrices import HIV_BETWEEN_F
+from BioExt.align import Aligner
 
 hbf = HIV_BETWEEN_F.load()
 aln = Aligner(hbf, do_codon=True, expected_identity=0.6)

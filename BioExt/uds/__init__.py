@@ -13,7 +13,7 @@ from Bio.Align import MultipleSeqAlignment
 from Bio.Seq import Seq, reverse_complement as rc
 from Bio.SeqRecord import SeqRecord
 
-from BioExt.aligner import Aligner
+from BioExt.align import Aligner
 from BioExt.joblib import Parallel, delayed
 from BioExt.misc import compute_cigar, gapful, gapless
 
@@ -127,7 +127,7 @@ def _align_par(
                 ]
             ).lazy(
                 delayed_(i, _align)(record)
-                for i, record in enumerate(records)
+                for i, record in enumerate(records, start=1)
                 )
         if keep(score, record)
         )
@@ -153,7 +153,7 @@ def align_to_refseq(
         raise ValueError('keeping insertions is unsupported at this time')
 
     if score_matrix is None:
-        from BioExt.scorematrix import BLOSUM62
+        from BioExt.scorematrices import BLOSUM62
         score_matrix = BLOSUM62.load()
 
     # drop-in compatibility with hy454

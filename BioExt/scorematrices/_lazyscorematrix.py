@@ -3,7 +3,7 @@ from __future__ import division, print_function
 
 from os.path import exists, join
 
-from BioExt.scorematrix._scorematrix import parse_scorematrix
+from BioExt.scorematrices._scorematrix import parse_scorematrix
 
 
 __all__ = []

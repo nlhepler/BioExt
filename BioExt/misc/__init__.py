@@ -20,6 +20,7 @@ from Bio.SeqFeature import FeatureLocation, SeqFeature
 __all__ = [
     '_GAP', '_STOP',
     'randgene',
+    'homocount',
     'homosplit',
     'intersperse',
     'by_codon',
@@ -91,17 +92,22 @@ def randgene(length, ppf):
     return ''.join(s)[:length]
 
 
-def homosplit(iterable):
+def homocount(iterable):
     it = iter(iterable)
     a = next(it)
     i = 1
     for b in it:
         if b != a:
-            yield a * i
+            yield (a, i)
             a = b
             i = 0
         i += 1
-    yield a * i
+    yield (a, i)
+
+
+def homosplit(iterable):
+    for a, i in homocount(iterable):
+        yield a * i
 
 
 def intersperse(iterable, delimiter, n=1):

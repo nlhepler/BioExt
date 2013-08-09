@@ -15,20 +15,20 @@ np_inc = [os.path.join(os.path.dirname(numpy.__file__), 'core', 'include')]
 
 ext_modules = [
     Extension(
-        'BioExt.aligner._align',
+        'BioExt.align._align',
         sources=[
-            os.path.join('BioExt', 'aligner', '_align.c'),
-            os.path.join('BioExt', 'aligner', 'alignment.c')
+            os.path.join('BioExt', 'align', '_align.c'),
+            os.path.join('BioExt', 'align', 'alignment.c')
             ],
         include_dirs=np_inc,
         libraries=['m'],
         extra_compile_args=['-O3']
         ),
     Extension(
-        'BioExt.merger._merge',
+        'BioExt.merge._merge',
         sources=[
-            os.path.join('BioExt', 'merger', '_merge.c'),
-            os.path.join('BioExt', 'merger', 'merge.cpp')
+            os.path.join('BioExt', 'merge', '_merge.c'),
+            os.path.join('BioExt', 'merge', 'merge.cpp')
             ],
         extra_compile_args=['-O3']
         ),
@@ -53,7 +53,7 @@ setup(
     license='GNU GPL version 3',
     packages=[
         'BioExt',
-        'BioExt.aligner',
+        'BioExt.align',
         'BioExt.collections',
         'BioExt.errorize',
         'BioExt.freetype',
@@ -65,7 +65,7 @@ setup(
         'BioExt.io.SamIO',
         'BioExt.joblib',
         'BioExt.joblib.test',
-        'BioExt.merger',
+        'BioExt.merge',
         'BioExt.misc',
         'BioExt.ndarray',
         'BioExt.optimize',
@@ -74,14 +74,14 @@ setup(
         'BioExt.quiver',
         'BioExt.rateclass',
         'BioExt.references',
-        'BioExt.scorematrix',
+        'BioExt.scorematrices',
         'BioExt.stats',
         'BioExt.uds',
         'BioExt.untranslate'
         ],
     package_dir={
         'BioExt': 'BioExt',
-        'BioExt.aligner': 'BioExt/aligner',
+        'BioExt.align': 'BioExt/align',
         'BioExt.collections': 'BioExt/collections',
         'BioExt.errorize': 'BioExt/errorize',
         'BioExt.freetype': 'BioExt/freetype',
@@ -93,7 +93,7 @@ setup(
         'BioExt.io.SamIO': 'BioExt/io/SamIO',
         'BioExt.joblib': 'BioExt/joblib',
         'BioExt.joblib.test': 'BioExt/joblib/test',
-        'BioExt.merger': 'BioExt/merger',
+        'BioExt.merge': 'BioExt/merge',
         'BioExt.misc': 'BioExt/misc',
         'BioExt.ndarray': 'BioExt/ndarray',
         'BioExt.optimize': 'BioExt/optimize',
@@ -102,7 +102,7 @@ setup(
         'BioExt.quiver': 'BioExt/quiver',
         'BioExt.rateclass': 'BioExt/rateclass',
         'BioExt.references': 'BioExt/references',
-        'BioExt.scorematrix': 'BioExt/scorematrix',
+        'BioExt.scorematrices': 'BioExt/scorematrices',
         'BioExt.stats': 'BioExt/stats',
         'BioExt.uds': 'BioExt/uds',
         'BioExt.untranslate': 'BioExt/untranslate'

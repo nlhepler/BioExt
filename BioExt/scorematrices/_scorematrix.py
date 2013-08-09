@@ -181,6 +181,21 @@ class ScoreMatrix(object):
 
         return OrderedDict(zip(self.__letters, freqs))
 
+    @property
+    def __valid_scores(self):
+        if isinstance(self, DNAScoreMatrix):
+            return chain.from_iterable((s for s in r[:4]) for r in self.__matrix[:4])
+        elif isinstance(self, ProteinScoreMatrix):
+            return chain.from_iterable((s for s in r[:20]) for r in self.__matrix[:20])
+        else:
+            return chain.from_iterable((s for s in r) for r in self.__matrix)
+
+    def max(self):
+        return max(self.__valid_scores)
+
+    def min(self):
+        return min(self.__valid_scores)
+
 
 class DNAScoreMatrix(ScoreMatrix):
 
