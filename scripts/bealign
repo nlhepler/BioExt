@@ -178,7 +178,7 @@ if __name__ == '__main__':
         '-r', '--reference',
         metavar='REFERENCE',
         type=reference,
-        help='REFERENCE FASTA file or {{{0}}}'.format(','.join(references.keys()))
+        help='REFERENCE FASTA file or {{{0}}}'.format(', '.join(references.keys()))
         )
     parser.add_argument(
         '-e', '--expected-identity',
@@ -191,14 +191,18 @@ if __name__ == '__main__':
         metavar='ALPHABET',
         choices=('amino', 'dna', 'codon'),
         default='codon',
-        help='perform an alignment using ALPHABET [default=codon]'
+        help='perform an alignment using one of {{{0}}} [default=codon]'.format(
+            ', '.join(('amino', 'dna', 'codon'))
+            )
         )
     parser.add_argument(
         '-m', '--score-matrix',
         metavar='SCOREMATRIX',
         choices=sorted(SCORE_MATRICES.keys()),
         default='BLOSUM62',
-        help='parameterize using SCOREMATRIX [default=BLOSUM62]'
+        help='parameterize using one of {{{0}}} [default=BLOSUM62]'.format(
+            ', '.join(SCORE_MATRICES.keys())
+            )
         )
     parser.add_argument(
         '-D', '--discard',
