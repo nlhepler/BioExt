@@ -4,12 +4,28 @@ from __future__ import division, print_function
 
 import sys
 
+import BioExt.scorematrices
+
 from Bio import SeqIO
 
 from BioExt.io import BamIO
 from BioExt.misc import compute_cigar, gapless
-from BioExt.scorematrices import FrequenciesError
+from BioExt.scorematrices import (
+    DNAScoreMatrix,
+    FrequenciesError,
+    LazyScoreMatrix,
+    ProteinScoreMatrix
+    )
 from BioExt.uds import _align_par
+
+
+SCORE_MATRICES = {}
+
+
+for key in dir(BioExt.scorematrices):
+    val = getattr(BioExt.scorematrices, key)
+    if isinstance(val, (DNAScoreMatrix, LazyScoreMatrix, ProteinScoreMatrix)):
+        SCORE_MATRICES[key] = val
 
 
 def main(
@@ -17,18 +33,26 @@ def main(
         output_handle,
         reference,
         expected_identity,
-        do_codon,
+        alphabet,
         reverse_complement,
-        dna_score_matrix,
-        protein_score_matrix,
+        score_matrix,
         discard_handle,
         do_sort,
         quiet):
 
-    if do_codon:
-        score_matrix = protein_score_matrix
-    else:
-        score_matrix = dna_score_matrix
+    try:
+        score_matrix_ = score_matrix.load()
+    except:
+        raise RuntimeError('could not load the score matrix')
+
+    if ((alphabet == 'dna' and not isinstance(score_matrix, DNAScoreMatrix)) and
+            not isinstance(score_matrix, ProteinScoreMatrix)):
+        raise ValueError(
+            'DNA alphabet requires a DNA score matrix, '
+            'while amino and codon alphabets require a protein score matrix'
+            )
+
+    do_codon = alphabet == 'codon'
 
     records = SeqIO.parse(input_handle, 'fasta')
 
@@ -63,7 +87,7 @@ def main(
         _align_par(
             reference,
             records,
-            score_matrix,
+            score_matrix_,
             do_codon,
             reverse_complement,
             expected_identity,
@@ -92,8 +116,6 @@ if __name__ == '__main__':
 
     from BioExt.references import hxb2, nl4_3
 
-    import BioExt.scorematrices
-
     references = {
         'HXB2_env': hxb2.env,
         'HXB2_gag': hxb2.gag,
@@ -110,19 +132,6 @@ if __name__ == '__main__':
         'HXB2_vpu': hxb2.vpu,
         'NL4-3_prrt': nl4_3.prrt
         }
-
-    protein_score_matrices = {}
-    dna_score_matrices = {}
-    for sm in dir(BioExt.scorematrices):
-        sm_ = getattr(BioExt.scorematrices, sm)
-        try:
-            sm_ = sm_.load()
-            if isinstance(sm_, BioExt.scorematrices.DNAScoreMatrix):
-                dna_score_matrices[sm] = sm_
-            elif isinstance(sm_, BioExt.scorematrices.ProteinScoreMatrix):
-                protein_score_matrices[sm] = sm_
-        except (AttributeError, TypeError):
-            continue
 
     def reference(string):
         if string in references:
@@ -177,22 +186,18 @@ if __name__ == '__main__':
         help='discard sequences that are insufficiently identical to the reference'
         )
     parser.add_argument(
-        '-n', '--no-codon',
-        dest='do_codon',
-        action='store_false',
-        help="don't use codon-aware alignment algorithm"
+        '-a', '--alphabet',
+        metavar='ALPHABET',
+        choices=('amino', 'dna', 'codon'),
+        default='codon',
+        help='perform an alignment using ALPHABET [default=codon]'
         )
     parser.add_argument(
-        '-d', '--dna-score-matrix',
-        choices=sorted(dna_score_matrices.keys()),
-        default='DNA65',
-        help='use a specific scoring matrix [default=DNA65]'
-        )
-    parser.add_argument(
-        '-p', '--protein-score-matrix',
-        choices=sorted(protein_score_matrices.keys()),
+        '-m', '--score-matrix',
+        metavar='SCOREMATRIX',
+        choices=sorted(SCORE_MATRICES.keys()),
         default='BLOSUM62',
-        help='use a specific scoring matrix [default=BLOSUM62]'
+        help='parameterize using SCOREMATRIX [default=BLOSUM62]'
         )
     parser.add_argument(
         '-D', '--discard',
@@ -209,14 +214,15 @@ if __name__ == '__main__':
             )
         )
     parser.add_argument(
-        '-s', '--sort',
-        action='store_true',
-        help='sort resulting BAM file after alignment'
+        '-S', '--no-sort',
+        dest='sort',
+        action='store_false',
+        help='do NOT sort the resulting BAM file [the default is to sort]'
         )
     parser.add_argument(
         '-q', '--quiet',
         action='store_true',
-        help='do not report the number of sequences dispatched'
+        help='do not print status update messages'
         )
 
     args = None
@@ -230,10 +236,9 @@ if __name__ == '__main__':
             output_file,
             args.reference,
             args.expected_identity,
-            args.do_codon,
+            args.alphabet,
             args.reverse_complement,
-            dna_score_matrices[args.dna_score_matrix],
-            protein_score_matrices[args.protein_score_matrix],
+            SCORE_MATRICES[args.score_matrix],
             args.discard,
             args.sort,
             args.quiet

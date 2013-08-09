@@ -2,9 +2,10 @@
 from __future__ import division, print_function
 
 from BioExt.scorematrices._scorematrix import *
+from BioExt.scorematrices._lazyscorematrix import LazyScoreMatrix
 
 
-__all__ = []
+__all__ = ['LazyScoreMatrix']
 __all__ += _scorematrix.__all__
 
 
