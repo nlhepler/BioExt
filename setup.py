@@ -120,6 +120,7 @@ setup(
         'scripts/bealign',
         'scripts/begraph',
         'scripts/consensus',
+        'scripts/seqmerge',
         'scripts/translate'
         # 'scripts/variants'
         ],
