@@ -12,19 +12,19 @@ def transform(record):
     return hash(str(record.seq).upper())
 
 
-def newrecord(counts, record, sep='_'):
+def newrecord(counts, record, sep='_N:'):
     r = transform(record)
     count = counts[r]
     if count == 0:
         return None
-    s = '{0:s}N:{1:d}'.format(sep, count)
+    s = '{0:s}{1:d}'.format(sep, count)
     record.id += s
     record.description += s
     del counts[r]
     return record
 
 
-def main(in_handle, out_handle, sep='_'):
+def main(in_handle, out_handle, sep='_N:'):
 
     try:
         signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -61,8 +61,8 @@ if __name__ == '__main__':
         '-s', '--separator',
         metavar='SEP',
         type=str,
-        default='_',
-        help="sequence count will be appended as '(SEP)N:COUNT'"
+        default='_N:',
+        help="sequence count will be appended as '(SEP)COUNT'"
         )
     parser.add_argument(
         'input',
