@@ -1,45 +1,80 @@
 #!/usr/bin/env python3
 
 import signal
+import argparse
 
-from Bio import AlignIO
-from Bio.Align import MultipleSeqAlignment
-from BioExt.io import BamIO
+from Bio import SeqIO
+from BioExt.io._SamBamIO import _to_seqrecord
 from BioExt.misc import gapful
 
 import pysam
 
 
-def main(bam_file, out_handle):
+def regiontype(string):
+    try:
+        start, end = string.split(':')
+        start = int(start) - 1 if start else None
+        end = int(end) if end else None
+
+        if start:
+            assert start >= 0
+        if end:
+            assert end >= 0
+        if start and end:
+            assert end > start
+
+        return start, end
+    except:
+        raise argparse.ArgumentTypeError("'{0:s}' is not in the form of START:END".format(string))
+
+
+def main(bam_file, out_handle, start=None, end=None):
 
     try:
         signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     except ValueError:
         pass
 
-    seqs = [gapful(record, insertions=False) for record in BamIO.parse(bam_file)]
+    try:
+        samfile = pysam.Samfile(bam_file, 'rb')
+        length = samfile.header['SQ'][0]['LN']
+        fetch_args = []
 
-    samfile = pysam.Samfile(bam_file, 'rb')
-    length = samfile.header['SQ'][0]['LN']
-    samfile.close()
+        if start is not None or end is not None:
+            fetch_args.extend([samfile.getrname(0), start, end])
 
-    msa = MultipleSeqAlignment(
-        [seq + ('-' * (length - len(seq))) for seq in seqs]
-        )
-
-    AlignIO.write(msa, out_handle, 'fasta')
+        SeqIO.write(
+            (
+                (seq + ('-' * (length - len(seq))))[start:end]
+                for seq in (
+                    gapful(_to_seqrecord(samfile, record), insertions=False)
+                    for record in samfile.fetch(*fetch_args)
+                    )
+                ),
+            out_handle,
+            'fasta'
+            )
+    finally:
+        if samfile is not None:
+            samfile.close()
 
     return 0
 
 
 if __name__ == '__main__':
     import sys
-    import argparse
 
     parser = argparse.ArgumentParser(
         description='convert a BAM file to a MSA, removing insertions'
         )
 
+    parser.add_argument(
+        '-r', '--region',
+        metavar='REGION',
+        type=regiontype,
+        default=(None, None),
+        help='only include sequences in a certain REGION'
+        )
     parser.add_argument(
         'input',
         metavar='INPUT',
@@ -60,7 +95,7 @@ if __name__ == '__main__':
         args = parser.parse_args()
         bam_file = args.input.name
         args.input.close()
-        retcode = main(bam_file, args.output)
+        retcode = main(bam_file, args.output, *args.region)
     finally:
         if args is not None:
             if args.output != sys.stdout:
