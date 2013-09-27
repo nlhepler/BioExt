@@ -36,13 +36,13 @@ def main(bam_file, out_handle, start=None, end=None):
         pass
 
     try:
-        #Index bam file in order to samfile.fetch
-        pysam.index(bam_file)
         samfile = pysam.Samfile(bam_file, 'rb')
         length = samfile.header['SQ'][0]['LN']
         fetch_args = []
 
         if start is not None or end is not None:
+            # Index bam file in order to samfile.fetch with arguments
+            pysam.index(bam_file)
             fetch_args.extend([samfile.getrname(0), start, end])
 
         SeqIO.write(
