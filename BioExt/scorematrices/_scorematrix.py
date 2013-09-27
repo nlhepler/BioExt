@@ -34,7 +34,7 @@ class FrequenciesError(RuntimeError):
     pass
 
 
-def parse_scorematrix(smpath):
+def parse_scorematrix(name, smpath):
     with open(smpath) as fh:
         ws = re_compile(r'\s+')
         comment = re_compile(r'^\s*#')
@@ -57,9 +57,9 @@ def parse_scorematrix(smpath):
         if lettersX != lettersY or lettersX[:len(letters)] != letters:
             cols = [lettersX.index(l) for l in letters]
             rows = [lettersY.index(l) for l in letters]
-            return klass([[W[i][j] for j in cols] for i in rows])
+            return klass(name, [[W[i][j] for j in cols] for i in rows])
         else:
-            return klass(W)
+            return klass(name, W)
 
 
 def _normalize(matrix):
@@ -75,10 +75,17 @@ def _normalize(matrix):
 
 class ScoreMatrix(object):
 
-    def __init__(self, matrix, letters):
+    def __init__(self, name, matrix, letters):
+        self.__name = name
         self.__matrix = matrix
         self.__letters = ''.join(letters)  # make sure it's a string
         self.__format = '%% %ds' % max(len(str(d)) for d in chain(*matrix))
+
+    def __repr__(self):
+        return self.__name
+
+    def __str__(self):
+        return self.__name
 
     @property
     def letters(self):
@@ -201,8 +208,8 @@ class ScoreMatrix(object):
 
 class DNAScoreMatrix(ScoreMatrix):
 
-    def __init__(self, matrix, letters=dletters):
-        super(DNAScoreMatrix, self).__init__(matrix, letters)
+    def __init__(self, name, matrix, letters=dletters):
+        super(DNAScoreMatrix, self).__init__(name, matrix, letters)
 
 
 class DNAExpIdScoreMatrix(DNAScoreMatrix):
@@ -214,6 +221,7 @@ class DNAExpIdScoreMatrix(DNAScoreMatrix):
     }
 
     def __init__(self, expected_identity, freqs=None):
+        name = 'DNA{0:d}'.format(round(100 * expected_identity))
         if freqs is None:
             freqs = DNAExpIdScoreMatrix.UNIFORM_FREQS
         if not set(freqs.keys()).issubset(set(dletters)):
@@ -230,13 +238,13 @@ class DNAExpIdScoreMatrix(DNAScoreMatrix):
                     matrix[i][j] = int(round(lam * log(pab / (freqs[l] * freqs[k]))))
                 else:
                     matrix[i][j] = int(round(lam * log(pnab / (freqs[l] * freqs[k]))))
-        super(DNAExpIdScoreMatrix, self).__init__(matrix, dletters)
+        super(DNAExpIdScoreMatrix, self).__init__(name, matrix, dletters)
 
 
 class ProteinScoreMatrix(ScoreMatrix):
 
-    def __init__(self, matrix, letters=pletters):
-        super(ProteinScoreMatrix, self).__init__(matrix, letters)
+    def __init__(self, name, matrix, letters=pletters):
+        super(ProteinScoreMatrix, self).__init__(name, matrix, letters)
 
 
 DNA65 = DNAExpIdScoreMatrix(0.65)

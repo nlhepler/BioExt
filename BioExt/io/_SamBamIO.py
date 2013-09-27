@@ -169,18 +169,16 @@ def _write(mode, records, path, reference, new_style, header):
 
         samfile = pysam.Samfile(path, mode, header=header)
 
-        if reference is not None and isinstance(records, MultipleSeqAlignment):
-            def iterate(records):
-                for record in records:
-                    if ('CIGAR' in record.annotations and
-                            'position' in record.annotations):
-                        yield record
-                    else:
-                        yield compute_cigar(reference, record, new_style)
-        else:
-            def iterate(records):
-                for record in records:
+        def iterate(records):
+            for record in records:
+                if ('CIGAR' in record.annotations and
+                        'position' in record.annotations):
                     yield record
+                elif reference is not None and len(record) == len(reference):
+                    yield compute_cigar(reference, record, new_style=new_style)
+                else:
+                    msg = 'provide aligned SeqRecords with their reference or position- and CIGAR-annotated SeqRecords'
+                    raise RuntimeError(msg)
 
         for record in iterate(records):
             if samfile.write(_from_seqrecord(header, record)):

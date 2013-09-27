@@ -54,6 +54,7 @@ setup(
     packages=[
         'BioExt',
         'BioExt.align',
+        'BioExt.args',
         'BioExt.collections',
         'BioExt.errorize',
         'BioExt.freetype',
@@ -82,6 +83,7 @@ setup(
     package_dir={
         'BioExt': 'BioExt',
         'BioExt.align': 'BioExt/align',
+        'BioExt.args': 'BioExt/args',
         'BioExt.collections': 'BioExt/collections',
         'BioExt.errorize': 'BioExt/errorize',
         'BioExt.freetype': 'BioExt/freetype',
@@ -120,6 +122,7 @@ setup(
         'scripts/bealign',
         'scripts/begraph',
         'scripts/consensus',
+        'scripts/msa2bam',
         'scripts/seqmerge',
         'scripts/translate'
         # 'scripts/variants'

@@ -4,28 +4,21 @@ from __future__ import division, print_function
 
 import sys
 
-import BioExt.scorematrices
-
 from Bio import SeqIO
 
+from BioExt.args import (
+    add_alphabet,
+    add_reference,
+    add_scorematrix
+    )
 from BioExt.io import BamIO
 from BioExt.misc import compute_cigar, gapless
 from BioExt.scorematrices import (
     DNAScoreMatrix,
     FrequenciesError,
-    LazyScoreMatrix,
     ProteinScoreMatrix
     )
 from BioExt.uds import _align_par
-
-
-SCORE_MATRICES = {}
-
-
-for key in dir(BioExt.scorematrices):
-    val = getattr(BioExt.scorematrices, key)
-    if isinstance(val, (DNAScoreMatrix, LazyScoreMatrix, ProteinScoreMatrix)):
-        SCORE_MATRICES[key] = val
 
 
 def main(
@@ -59,7 +52,6 @@ def main(
     # grab the first, make it gapless once and for all
     if reference is None:
         reference = gapless(next(records))
-
         def allseqs(records):
             yield compute_cigar(reference, reference)
             for record in records:
@@ -115,35 +107,6 @@ if __name__ == '__main__':
     from os.path import getsize
 
     from BioExt import __version__ as version
-    from BioExt.references import hxb2, nl4_3
-
-    references = {
-        'HXB2_env': hxb2.env,
-        'HXB2_gag': hxb2.gag,
-        'HXB2_int': hxb2.int,
-        'HXB2_nef': hxb2.nef,
-        'HXB2_pol': hxb2.pol,
-        'HXB2_pr': hxb2.pr,
-        'HXB2_prrt': hxb2.prrt,
-        'HXB2_rev': hxb2.rev,
-        'HXB2_rt': hxb2.rt,
-        'HXB2_tat': hxb2.tat,
-        'HXB2_vif': hxb2.vif,
-        'HXB2_vpr': hxb2.vpr,
-        'HXB2_vpu': hxb2.vpu,
-        'NL4-3_prrt': nl4_3.prrt
-        }
-
-    def reference(string):
-        if string in references:
-            return references[string].load()
-        try:
-            with open(string) as handle:
-                ref = next(SeqIO.parse(handle, 'fasta'))
-            return ref
-        except:
-            msg = "'{0}' does not exist or is not a valid FASTA file".format(string)
-            raise argparse.ArgumentTypeError(msg)
 
     def probability(string):
         try:
@@ -174,36 +137,15 @@ if __name__ == '__main__':
         type=argparse.FileType('wb'),
         help='send BAM to OUTPUT'
         )
-    parser.add_argument(
-        '-r', '--reference',
-        metavar='REFERENCE',
-        type=reference,
-        help='REFERENCE FASTA file or {{{0}}}'.format(', '.join(references.keys()))
-        )
+    add_reference(parser, '-r', '--reference')
     parser.add_argument(
         '-e', '--expected-identity',
         type=probability,
         default=None,
         help='discard sequences that are insufficiently identical to the reference'
         )
-    parser.add_argument(
-        '-a', '--alphabet',
-        metavar='ALPHABET',
-        choices=('amino', 'dna', 'codon'),
-        default='codon',
-        help='perform an alignment using one of {{{0}}} [default=codon]'.format(
-            ', '.join(('amino', 'dna', 'codon'))
-            )
-        )
-    parser.add_argument(
-        '-m', '--score-matrix',
-        metavar='SCOREMATRIX',
-        choices=sorted(SCORE_MATRICES.keys()),
-        default='BLOSUM62',
-        help='parameterize using one of {{{0}}} [default=BLOSUM62]'.format(
-            ', '.join(SCORE_MATRICES.keys())
-            )
-        )
+    add_alphabet(parser, '-a', '--alphabet')
+    add_scorematrix(parser, '-m', '--score-matrix')
     parser.add_argument(
         '-D', '--discard',
         metavar='DISCARD',
@@ -249,7 +191,7 @@ if __name__ == '__main__':
             args.expected_identity,
             args.alphabet,
             args.reverse_complement,
-            SCORE_MATRICES[args.score_matrix],
+            args.score_matrix,
             args.discard,
             args.sort,
             args.quiet

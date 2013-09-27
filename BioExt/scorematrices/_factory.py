@@ -2,8 +2,7 @@
 from __future__ import division, print_function
 
 from glob import iglob
-from os.path import (abspath, basename,
-    join, split)
+from os.path import abspath, basename, join, split
 from re import search as re_search
 
 
@@ -17,8 +16,8 @@ _smdir = join(
     split(
         split(
             abspath(__file__)
-        )[0] # _scorematrix/
-    )[0], # _scorematrix/../
+        )[0]  # _scorematrix/
+    )[0],  # _scorematrix/../
     'data',
     'scorematrices'
 )
@@ -30,5 +29,5 @@ def _smfactory(smdir=_smdir, smfmt='%s.txt'):
         m = re_search(smfmt % '(.+)', smpath)
         if m:
             name = basename(m.group(1))
-            matrices[name] = _lazyscorematrix(smdir, basename(smpath))
+            matrices[name] = _lazyscorematrix(name, smdir, basename(smpath))
     return matrices
