@@ -36,6 +36,8 @@ def main(bam_file, out_handle, start=None, end=None):
         pass
 
     try:
+        #Index bam file in order to samfile.fetch
+        pysam.index(bam_file)
         samfile = pysam.Samfile(bam_file, 'rb')
         length = samfile.header['SQ'][0]['LN']
         fetch_args = []
