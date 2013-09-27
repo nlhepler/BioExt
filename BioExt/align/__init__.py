@@ -93,7 +93,7 @@ class Aligner:
             raise ValueError('codon alignment requires a protein score matrix')
 
         if do_codon:
-            letters, score_matrix_ = _protein_to_codon(score_matrix)
+            letters, score_matrix_ = _protein_to_codon(score_matrix, 0.5)
         else:
             letters = score_matrix.letters
             score_matrix_ = score_matrix.tondarray()
@@ -108,11 +108,11 @@ class Aligner:
 
         # sane defaults for various penalties
         if open_insertion is None:
-            open_insertion = 1.5 * min_score
+            open_insertion = 3.0 * min_score
         if extend_insertion is None:
             extend_insertion = ext_cost
         if open_deletion is None:
-            open_deletion = 1.25 * min_score
+            open_deletion = 1.5 * min_score
         if extend_deletion is None:
             extend_deletion = ext_cost
         if miscall_cost is None:

@@ -156,9 +156,9 @@ class ScoreMatrix(object):
             return (Y(lam, matrix).sum() - 1) ** 2
 
         if isinstance(self, DNAScoreMatrix):
-            valid_letters = set('ACGT')
+            valid_letters = set(dletters[:4])
         elif isinstance(self, ProteinScoreMatrix):
-            valid_letters = set('ARNDCQEGHILKMFPSTWYV')
+            valid_letters = set(pletters[:20])
         else:
             valid_letters = set(self.letters)
 
@@ -184,11 +184,13 @@ class ScoreMatrix(object):
     @property
     def __valid_scores(self):
         if isinstance(self, DNAScoreMatrix):
-            return chain.from_iterable((s for s in r[:4]) for r in self.__matrix[:4])
+            valid_letters = set(dletters[:4])
         elif isinstance(self, ProteinScoreMatrix):
-            return chain.from_iterable((s for s in r[:20]) for r in self.__matrix[:20])
+            valid_letters = set(pletters[:20])
         else:
             return chain.from_iterable((s for s in r) for r in self.__matrix)
+        idxs = [i for i, l in enumerate(self.letters) if l in valid_letters]
+        return chain.from_iterable((self.__matrix[i][j] for j in idxs) for i in idxs)
 
     def max(self):
         return max(self.__valid_scores)
