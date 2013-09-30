@@ -305,6 +305,8 @@ class Aligner:
                 self.__cached_insertion_matrix
                 )
 
+        #print ("\n", score, "\n", "\n\n".join ([ref_, query_, str(open_insertion), str(extend_insertion), str (open_deletion), str(extend_deletion), str (miscall_cost), str (do_local), str (do_affine), ref_aligned.decode ('utf-8'), query_aligned.decode ('utf-8')]))
+
         if sys.version_info >= (3, 0):
             ref_aligned = ref_aligned.decode('utf-8')
             query_aligned = query_aligned.decode('utf-8')

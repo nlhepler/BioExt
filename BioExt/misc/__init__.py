@@ -309,7 +309,7 @@ def compute_cigar(reference, record, reference_name=None, new_style=False):
     # inject the annotations and yield
     record.annotations['CIGAR'] = cigar
     record.annotations['edit_distance'] = edit_distance
-    record.annotations['position'] = start
+    record.annotations['position'] = start 
     record.annotations['length'] = end - start
     record.annotations['reference_name'] = reference_name
 

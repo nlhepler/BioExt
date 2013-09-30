@@ -120,7 +120,8 @@ setup(
         'scripts/bealign',
         'scripts/begraph',
         'scripts/consensus',
-        'scripts/translate'
+        'scripts/translate',
+        'scripts/msa2json',
         # 'scripts/variants'
         ],
     ext_modules=ext_modules,

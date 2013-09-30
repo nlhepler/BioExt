@@ -155,8 +155,11 @@ def _magic_ticks(lwr, upr, div=5):
     return ticks
 
 
-def count_alignment(alignment, columns='all', refidx=None, limit=100):
+def count_alignment(alignment, columns='all', refidx=None, limit=100, embedded_counts = None):
     records = []
+    
+    if embedded_counts is not None:
+        import re
 
     if columns is None or columns == 'all':
         r = next(iter(alignment))
@@ -217,6 +220,7 @@ def count_alignment(alignment, columns='all', refidx=None, limit=100):
     counts = np.zeros((s, N), dtype=float)
 
     def allrecords():
+        i = 0
         for i, r in records:
             yield r
         for i, r in enumerate(alignment, start=i):
@@ -226,17 +230,25 @@ def count_alignment(alignment, columns='all', refidx=None, limit=100):
 
     for r in allrecords():
         for j, c in enumerate(columns):
+            if embedded_counts is not None:
+                m = embedded_counts.search (r.name)
+                if m is not None:
+                    weight = float (m.group(1))
+            else:
+                weight = 1.
+                
             ltr = r[c].upper()
+
             if ltr in skips:
                 continue
             elif ltr in ambigs:
-                frac = 1 / len(ambigs[ltr])
+                frac = weight / len(ambigs[ltr])
                 for ltr_ in ambigs[ltr]:
                     i = letters.index(ltr_)
                     counts[i, j] += frac
             elif ltr in letters:
                 i = letters.index(ltr)
-                counts[i, j] += 1
+                counts[i, j] += weight
             else:
                 raise ValueError('unknown letter: {0}'.format(ltr))
 
