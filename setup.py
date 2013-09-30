@@ -121,6 +121,7 @@ setup(
         'scripts/bamclip',
         'scripts/bealign',
         'scripts/begraph',
+        'scripts/clipedge',
         'scripts/consensus',
         'scripts/msa2bam',
         'scripts/seqmerge',

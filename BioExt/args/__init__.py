@@ -9,9 +9,8 @@ __all__ = [
     ]
 
 
-def add_alphabet(parser, shortarg='-a', longarg='--alphabet'):
-    parser.add_argument(
-        shortarg, longarg,
+def add_alphabet(parser, *args):
+    kwargs = dict(
         metavar='ALPHABET',
         choices=('amino', 'dna', 'codon'),
         default='codon',
@@ -19,10 +18,13 @@ def add_alphabet(parser, shortarg='-a', longarg='--alphabet'):
             ', '.join(('amino', 'dna', 'codon'))
             )
         )
+
+    parser.add_argument(*args, **kwargs)
+
     return parser
 
 
-def add_reference(parser, shortarg='-r', longarg='--reference'):
+def add_reference(parser, *args):
     from argparse import ArgumentTypeError
     from Bio import SeqIO
     from BioExt.references import hxb2, nl4_3
@@ -55,16 +57,18 @@ def add_reference(parser, shortarg='-r', longarg='--reference'):
             msg = "'{0}' does not exist or is not a valid FASTA file".format(string)
             raise ArgumentTypeError(msg)
 
-    parser.add_argument(
-        shortarg, longarg,
+    kwargs = dict(
         metavar='REFERENCE',
         type=reference,
         help='REFERENCE FASTA file or {{{0}}}'.format(', '.join(references.keys()))
         )
+
+    parser.add_argument(*args, **kwargs)
+
     return parser
 
 
-def add_scorematrix(parser, shortarg='-m', longarg='--score-matrix'):
+def add_scorematrix(parser, *args):
     import BioExt.scorematrices
     from BioExt.scorematrices import (
         DNAScoreMatrix,
@@ -78,8 +82,7 @@ def add_scorematrix(parser, shortarg='-m', longarg='--score-matrix'):
         if isinstance(val, (DNAScoreMatrix, LazyScoreMatrix, ProteinScoreMatrix)):
             score_matrices[str(val)] = val
 
-    parser.add_argument(
-        shortarg, longarg,
+    kwargs = dict(
         metavar='SCOREMATRIX',
         type=lambda s: score_matrices.get(s, s),
         choices=sorted(score_matrices.values(), key=str),
@@ -88,4 +91,7 @@ def add_scorematrix(parser, shortarg='-m', longarg='--score-matrix'):
             ', '.join(score_matrices.keys())
             )
         )
+
+    parser.add_argument(*args, **kwargs)
+
     return parser
