@@ -25,6 +25,12 @@ ext_modules = [
         extra_compile_args=['-O3']
         ),
     Extension(
+        'BioExt.graphing._count',
+        sources=[os.path.join('BioExt', 'graphing', '_count.c')],
+        include_dirs=np_inc,
+        extra_compile_args=['-O3']
+        ),
+    Extension(
         'BioExt.merge._merge',
         sources=[
             os.path.join('BioExt', 'merge', '_merge.c'),

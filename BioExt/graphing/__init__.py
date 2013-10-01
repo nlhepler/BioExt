@@ -9,7 +9,6 @@ from itertools import repeat
 from operator import itemgetter
 from os import close
 from os.path import dirname, join
-from re import compile as re_compile
 from tempfile import mkstemp
 
 from Bio.Alphabet import (
@@ -31,6 +30,7 @@ from matplotlib.ticker import (
     FuncFormatter
     )
 
+from BioExt.graphing._count import _count
 from BioExt.graphing._basefont import Basefont
 from BioExt.misc import _GAP, _STOP
 
@@ -155,17 +155,12 @@ def _magic_ticks(lwr, upr, div=5):
     return ticks
 
 
-def count_alignment(alignment, columns='all', refidx=None, limit=100):
+def count_alignment(alignment, columns=None, refidx=None, limit=100):
+
+    aln = iter(alignment)
     records = []
 
-    if columns is None or columns == 'all':
-        r = next(iter(alignment))
-        columns = list(range(len(r)))
-        records.append((0, r))
-
-    N = len(columns)
-
-    for i, r in enumerate(alignment, start=len(records)):
+    for i, r in enumerate(aln, start=len(records)):
         if len(records) > limit:
             break
         if i == refidx:
@@ -213,32 +208,38 @@ def count_alignment(alignment, columns='all', refidx=None, limit=100):
     else:
         raise RuntimeError("sequences with indeterminable alphabet provided")
 
-    s = len(letters)
-    counts = np.zeros((s, N), dtype=float)
+    def b(r):
+        return r.upper()
 
     def allrecords():
         for i, r in records:
-            yield r
-        for i, r in enumerate(alignment, start=i):
+            yield b(str(r.seq))
+        for i, r in enumerate(aln, start=i):
             if i == refidx:
                 continue
-            yield r
+            yield b(str(r.seq))
 
-    for r in allrecords():
-        for j, c in enumerate(columns):
-            ltr = r[c].upper()
-            if ltr in skips:
-                continue
-            elif ltr in ambigs:
-                frac = 1 / len(ambigs[ltr])
-                for ltr_ in ambigs[ltr]:
-                    i = letters.index(ltr_)
-                    counts[i, j] += frac
-            elif ltr in letters:
-                i = letters.index(ltr)
-                counts[i, j] += 1
-            else:
-                raise ValueError('unknown letter: {0}'.format(ltr))
+    alphabet = letters + ''.join(sorted(ambigs.keys()))
+    nchar = len(alphabet)
+    values = np.zeros((nchar, len(letters)), dtype=float)
+
+    for i, c in enumerate(alphabet):
+        if i < len(letters):
+            values[i, i] = 1.
+        else:
+            v = 1. / len(ambigs[c])
+            for d in ambigs[c]:
+                values[i, alphabet.index(d)] = v
+
+    if columns is not None:
+        columns = np.array(columns, dtype=int)
+
+    counts = _count(
+        allrecords(),
+        columns,
+        b(alphabet),
+        values
+        )
 
     return counts, (letters, colors)
 
