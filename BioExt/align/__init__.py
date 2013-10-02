@@ -305,9 +305,9 @@ class Aligner:
                 self.__cached_insertion_matrix
                 )
 
-        if sys.version_info >= (3, 0):
-            ref_aligned = ref_aligned.decode('utf-8')
-            query_aligned = query_aligned.decode('utf-8')
+            if sys.version_info >= (3, 0):
+                ref_aligned = ref_aligned.decode('utf-8')
+                query_aligned = query_aligned.decode('utf-8')
 
         if isinstance(ref, SeqRecord):
             ref_aligned_ = SeqRecord(
@@ -338,7 +338,8 @@ class Aligner:
             query_aligned_ = query_aligned
 
         # normalize score to per-position
-        score /= (len(query_) / 3) if self.__do_codon else len(query_)
+        if len(query_):
+            score /= (len(query_) / 3) if self.__do_codon else len(query_)
 
         return score, ref_aligned_, query_aligned_
 

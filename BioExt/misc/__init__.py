@@ -8,7 +8,7 @@ except:
     from collections import UserList
 
 from copy import copy
-from itertools import product
+from itertools import groupby, product
 from random import randint, random
 from re import compile as re_compile
 
@@ -139,7 +139,8 @@ def enumerate_by_codon(seq, gap_char=_GAP):
     elif isinstance(seq, Seq):
         seq = seq.tostring()
     elif not isinstance(seq, str):
-        raise ValueError('can only enumerate codons of a SeqRecord, Seq, or str')
+        msg = 'can only enumerate codons of a SeqRecord, Seq, or str'
+        raise ValueError(msg)
 
     seqlen = len(seq)
     num_cdns = seqlen // 3
@@ -163,7 +164,8 @@ def _translate_gapped(seq, *args, **kwds):
     elif isinstance(seq, str):
         s = seq
     else:
-        raise ValueError("can only translate sequences of type SeqRecord, Seq, or str")
+        msg = "can only translate sequences of type SeqRecord, Seq, or str"
+        raise ValueError(msg)
     gaps = 0
     lwr = 0
     protein = ''
@@ -215,7 +217,8 @@ def translate(seq, *args, **kwds):
     elif isinstance(seq, str):
         return _translate_gapped(seq, *args, **kwds)
     else:
-        raise ValueError('can only translate sequences of type SeqRecord, Seq, or str')
+        msg = 'can only translate sequences of type SeqRecord, Seq, or str'
+        raise ValueError(msg)
 
 
 def translate_ambiguous(seq, gap_char=_GAP, trim_gaps=True):
@@ -224,7 +227,8 @@ def translate_ambiguous(seq, gap_char=_GAP, trim_gaps=True):
     elif isinstance(seq, Seq):
         seqstr = seq.tostring()
     elif not isinstance(seq, str):
-        raise ValueError('can only enumerate codons of a SeqRecord, Seq, or str')
+        msg = 'can only enumerate codons of a SeqRecord, Seq, or str'
+        raise ValueError(msg)
 
     if trim_gaps:
         seqstr = seqstr.replace(gap_char, '')
@@ -369,53 +373,59 @@ def gapful(record, insertions=True):
         )
 
 
+def rle_encode(iterable):
+    rle = []
+    for name, group in groupby(iterable):
+        length = 0
+        for _ in group:
+            length += 1
+        rle.append('{0:d}{1:s}'.format(length, name))
+    return ''.join(rle)
+
+
 def clip(record, start, end, insertions=True, span=False):
     if span and record.annotations['position'] > start:
         return None
 
-    modes = 'M=XI' if insertions else 'M=X'
+    bases = []
+    poses = []
+    modes = []
 
-    def seqpos():
-        pos = record.annotations['position']
-        seq = iter(record.seq)
-        for m in _cigar_regexp.finditer(record.annotations['CIGAR']):
-            num, mode = int(m.group(1)), m.group(2).upper()
-            if mode in modes:
-                for _ in range(num):
-                    yield (next(seq), pos)
-                    if mode in 'M=X':
-                        pos += 1
-            elif mode == 'D':
-                pos += num
+    pos = record.annotations['position']
+    seq = iter(record.seq)
+    for m in _cigar_regexp.finditer(record.annotations['CIGAR']):
+        num, mode = int(m.group(1)), m.group(2).upper()
+        if not insertions and mode == 'I':
+            # if we're skipping insertions, consume those bases
+            for _ in range(num):
+                next(seq)
+        elif mode in 'DMIX=':
+            for _ in range(num):
+                # consume a base even if we're not going to keep it
+                base = None if mode == 'D' else next(seq)
+                if pos >= start and pos < end:
+                    bases.append(base)
+                    poses.append(pos)
+                    modes.append(mode)
+                pos += 0 if mode == 'I' else 1
 
-    if span:
-        minpos = None
-        maxpos = None
-        bases = []
+    if not len(poses):
+        return None
 
-        for base, pos in seqpos():
-            bases.append(base)
-            if minpos is None or pos < minpos:
-                minpos = pos
-            if maxpos is None or pos > maxpos:
-                maxpos = pos
+    if span and (min(poses) > start or max(poses) < (end - 1)):
+        return None
 
-        if minpos is None or minpos > start:
-            return None
-        elif maxpos is None or maxpos < (end - 1):
-            return None
-        else:
-            seq_ = ''.join(bases)
-    else:
-        seq_ = ''.join(base for base, pos in seqpos() if pos >= start and pos < end)
+    annotations = copy(record.annotations)
+    annotations['CIGAR'] = rle_encode(modes)
+    annotations['position'] = min(poses)
 
     return SeqRecord(
-        Seq(seq_, record.seq.alphabet),
+        Seq(''.join(base for base in bases if base), record.seq.alphabet),
         id=record.id,
         name=record.name,
         dbxrefs=copy(record.dbxrefs),
         # features = seq.features,
         description=record.description,
-        annotations=copy(record.annotations),
+        annotations=annotations,
         # letter_annotations=record.letter_annotations
         )
