@@ -241,7 +241,7 @@ def count_alignment(alignment, columns=None, refidx=None, limit=100):
         values
         )
 
-    return counts, (letters, colors)
+    return counts.transpose(), (letters, colors)
 
 
 def graph_coverage_majority(

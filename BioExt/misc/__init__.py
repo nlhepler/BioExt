@@ -166,6 +166,8 @@ def _translate_gapped(seq, *args, **kwds):
     else:
         msg = "can only translate sequences of type SeqRecord, Seq, or str"
         raise ValueError(msg)
+    while len(s) % 3 != 0:
+        s += 'N'
     gaps = 0
     lwr = 0
     protein = ''
@@ -182,7 +184,7 @@ def _translate_gapped(seq, *args, **kwds):
     if gaps:
         protein += '-' * gaps
     else:
-        protein += _translate(s[lwr:len(seq)].replace('-', 'N'))
+        protein += _translate(s[lwr:len(s)].replace('-', 'N'))
     return protein
 
 
